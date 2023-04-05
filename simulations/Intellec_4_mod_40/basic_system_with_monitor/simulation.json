@@ -1,0 +1,102 @@
+{
+
+"name":"Intellec 4 Mod 40",
+"maximum_steps":0,
+"delay_between_steps_ms":0,
+"delay_between_steps_ns":130000,
+
+"devices":[
+	{
+		"name":"FrontPanel",
+		"type":"Intellec_4_40_frontpanel",
+		"configuration":[]
+	},
+	{
+		"name":"ASR33",
+		"type":"ASR33Teletype",
+		"configuration":[
+			{"key":"tape_in", "value":"write_tty.hex"}
+		]
+	},
+	{
+		"name":"CPU",
+		"type":"Intel4040",
+		"configuration":[]
+	},
+	{
+		"name":"ROM",
+		"type":"ROMW8D8",
+		"configuration":[
+			{"key":"size", "value":4096},
+			{"key":"initialization_policy", "value":"ZERO"},
+			{"key":"load_hex", "value":"rom.hex"},
+			{"key":"invert_nibbles", "value":0}
+		]
+	},
+	{
+		"name":"DataRAM",
+		"type":"MemoryW4D4",
+		"configuration":[
+			{"key":"size", "value":500},
+			{"key":"initialization_policy", "value":"ZERO"}
+		]
+	},
+	{
+		"name":"ProgramRAM",
+		"type":"PROMW8D8",
+		"configuration":[
+			{"key":"size", "value":4096},
+			{"key":"initialization_policy", "value":"ZERO"}
+		]
+	},
+	{
+		"name":"ProgramRAMController",
+		"type":"PROMControllerBasic",
+		"configuration":[
+			{"key":"write_enable", "value":0}
+		]
+	},
+	{
+		"name":"MemoryBUS",
+		"type":"DataBusNoError",
+		"configuration":[]
+	},
+	{
+		"name":"IOBUS",
+		"type":"DataBusNoError",
+		"configuration":[]
+	},
+	{
+		"name":"ControlBUS",
+		"type":"ControlBusBasic",
+		"configuration":[
+			{"key":"signals", "value":"TEST,INT,STOP,STOPA"}
+		]
+	}
+	
+],
+
+"connections":[
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"ROM", "start":65536,"end":66560,"offset":65536},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"DataRAM", "start":524288,"end":524788,"offset":524288},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"ProgramRAM", "start":131072,"end":135168,"offset":131072},
+	{"type":"attachPROM","src":"ProgramRAMController", "dev":"ProgramRAM"},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"MemoryBUS"},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"IOBUS"},
+	{"type":"attachToControlBus", "src":"CPU", "dev":"ControlBUS"},
+	{"type":"attachToDataBus", "src":"FrontPanel", "dev":"MemoryBUS"},
+	{"type":"attachToControlBus", "src":"FrontPanel", "dev":"ControlBUS"},
+	{"type":"attachGenericDevice", "src":"FrontPanel", "dev":"CPU"},
+	
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":65536,"end":65536,"offset":65536,"comment":"Input port"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":524288,"end":524288,"offset":524288,"comment":"Output port (write characters)"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":524352,"end":524352,"offset":524351,"comment":"Control port (select tty/tape)"},
+
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ProgramRAMController", "start":65760,"end":65760,"offset":65759, "comment":"Write enable"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ProgramRAMController", "start":65776,"end":65776,"offset":65774, "comment":"Read old value"},
+	{"type":"attachPROMController", "src":"ProgramRAM", "dev":"ProgramRAMController"}
+	
+]
+
+
+}
