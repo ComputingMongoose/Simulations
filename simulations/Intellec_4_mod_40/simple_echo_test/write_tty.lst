@@ -1,0 +1,227 @@
+                        ; from https://www.retrotechnology.com/restore/4040_robson.lst
+                        ; requires constants.asm for defining register pseudonims
+                        
+                                 	RPAIRS  "ZERO7"
+   0000                          	ORG     0h
+                                  INCL    "constants.asm"
+                        ; useful Intel 4004 4040 equates for instruction mnemonics HRJ Jul 26 2020
+                        ; thanks also to Dwight Elvey in 2019 and 2020
+                        
+                        ;register pairs - A04 assembler assumes 0-7 values to designate pairs
+                        ; In the A04 assembler, instructions SRC JIN FIN FIM, assume a value 
+                        ; only 0 through 7 inclusive; otherwise it's an error. That value if acceptable,
+                        ; becomes three bits, which are inserted into the appropriate three bits
+                        ; of one of those instructions, to complete the instruction code value. 
+                        
+   0000                 R01	EQU	00
+   0001                 R23	EQU	01
+   0002                 R45	EQU	02
+   0003                 R67	EQU	03
+   0004                 R89	EQU	04
+   0005                 RAB	EQU	05
+   0006                 RCD	EQU	06
+   0007                 REF	EQU	07
+                        
+   0000                 R0R1	EQU	00
+   0001                 R2R3	EQU	01
+   0002                 R4R5	EQU	02
+   0003                 R6R7	EQU	03
+   0004                 R8R9	EQU	04
+                        
+   0000                 r0r1	EQU	00
+   0001                 r2r3	EQU	01
+   0002                 r4r5	EQU	02
+   0003                 r6r7	EQU	03
+   0004                 r8r9	EQU	04
+                        
+                        ; The Intel MCS-04 manual says its assembler supports the following symbols
+                        ; but wants EVEN values 0 2 4 6 .. 14 for these register pairs symbols.
+                        ; I've assigned them values consistent with A04 as noted above.
+                        
+   0000                 P0	EQU	00
+   0001                 P1	EQU	01
+   0002                 P2	EQU	02
+   0003                 P3	EQU	03
+   0004                 P4	EQU	04
+   0005                 P5	EQU	05
+   0006                 P6	EQU	06
+   0007                 P7	EQU	07
+                        
+                        ;single resister symbols. A04 only accepts 0-15 for a single register value.
+                        
+   0000                 R0	EQU	0
+   0001                 R1	EQU	1
+   0002                 R2	EQU	2
+   0003                 R3	EQU	3
+   0004                 R4	EQU	4
+   0005                 R5	EQU	5
+   0006                 R6	EQU	6
+   0007                 R7	EQU	7
+   0008                 R8	EQU	8
+   0009                 R9	EQU	9
+   000a                 RA	EQU	10
+   000b                 RB	EQU	11
+   000c                 RC	EQU	12
+   000d                 RD	EQU	13
+   000e                 RE	EQU	14
+   000f                 RF	EQU	15
+                        
+   0000                 r0	EQU	0
+   0001                 r1	EQU	1
+   0002                 r2	EQU	2
+   0003                 r3	EQU	3
+   0004                 r4	EQU	4
+   0005                 r5	EQU	5
+   0006                 r6	EQU	6
+   0007                 r7	EQU	7
+   0008                 r8	EQU	8
+   0009                 r9	EQU	9
+   000a                 ra	EQU	10
+   000b                 rb	EQU	11
+   000c                 rc	EQU	12
+   000d                 rd	EQU	13
+   000e                 re	EQU	14
+   000f                 rf	EQU	15
+                        
+                        ;JCN condition codes (JCN NC addr, etc.) A04 accepts a value 0-15.
+                        ;these symbols courtesy Dwight Elvey
+                        
+   0001                 T0	EQU	$1 ;test = 0
+   0002                 C	EQU	$2 ;carry = 1
+   0003                 CT0	equ	$3 ; carry = 1 or test = 0
+   0004                 Z	EQU	$4 ; acc = 0
+   0005                 ZT0	EQU	$5 ; acc=0 or test = 0
+   0006                 ZC	EQU	$6 ; acc= 0 or carry = 1
+   0007                 ZCT0	EQU	$7 ; acc=0 or carry = 1 or test = 0
+   0009                 NT0	EQU	$9 ; Test = 1
+   000a                 NC	EQU	$A ; carry = 0
+   000b                 NCT0	EQU	$B ; not  ( carry = 1 or is test = 0 )
+   000c                 NZ	EQU	$C ; acc <> 0
+   000d                 NZT0	EQU	$D ; not ( acc = 0 or test = 0 )
+   000e                 NZC	EQU	$E ; not ( acc=0 or carry = 1 )
+   000f                 NZCT0	EQU	$F ; not ( acc=0 or carry=1 or test=0 )
+                        ; JCN 0 -> jump never, JCN 8 -> jump always
+                        
+                        ;alternative JCN condition codes
+                        
+   0004                 ZAC  EQU $4  ;jump on zero accum  
+   000c                 NZAC EQU $C  ;jump on not zero accum
+   000a                 ZCY  EQU $A  ;jump on zero carry 
+   0002                 NZCY EQU $2  ;jump on not zero carry
+   0001                 ZTS  EQU $1  ;jump on zero test   
+   0009                 NZTS EQU $9  ;jump on not zero test
+                        
+                        
+                        
+                        
+   0000                 START:
+   0000   22 31                     fim r2r3,'1'                          
+   0002   50 49                     jms PrintTTYR2
+   0004   50 41                     jms PrintCRLF                         ; Print CR/LF
+   0006   22 32                     fim r2r3,'2'                          
+   0008   50 49                     jms PrintTTYR2
+   000a   50 41                     jms PrintCRLF                         ; Print CR/LF
+   000c   22 33                     fim r2r3,'3'                          
+   000e   50 49                     jms PrintTTYR2
+   0010   50 41                     jms PrintCRLF                         ; Print CR/LF
+   0012   22 34                     fim r2r3,'4'                          
+   0014   50 49                     jms PrintTTYR2
+   0016   50 41                     jms PrintCRLF                         ; Print CR/LF
+   0018   22 35                     fim r2r3,'5'                          
+   001a   50 49                     jms PrintTTYR2
+   001c   50 41                     jms PrintCRLF                         ; Print CR/LF
+   001e   22 36                     fim r2r3,'6'                          
+   0020   50 49                     jms PrintTTYR2
+   0022   50 41                     jms PrintCRLF                         ; Print CR/LF
+   0024   22 37                     fim r2r3,'7'                          
+   0026   50 49                     jms PrintTTYR2
+   0028   50 41                     jms PrintCRLF                         ; Print CR/LF
+   002a   22 38                     fim r2r3,'8'                          
+   002c   50 49                     jms PrintTTYR2
+   002e   50 41                     jms PrintCRLF                         ; Print CR/LF
+   0030   22 39                     fim r2r3,'9'                          
+   0032   50 49                     jms PrintTTYR2
+   0034   50 41                     jms PrintCRLF                         ; Print CR/LF
+   0036   22 30                     fim r2r3,'0'                          
+   0038   50 49                     jms PrintTTYR2
+   003a   50 41                     jms PrintCRLF                         ; Print CR/LF
+                                    
+   003c   22 2e                     fim r2r3,'.'                          ; Print decimal point.
+   003e   50 49                     jms PrintTTYR2
+   0040   01                        hlt
+                        
+   0041                 PrintCRLF:
+   0041   22 0d                     fim r2r3,0dh                          ; send CR to TTY and drop through.              
+   0043   50 49                     jms PrintTTYR2
+   0045                 PrintLF:                                          ; send LF to TTY
+   0045   22 0a                     fim r2r3,0ah
+   0047   40 49                     jun PrintTTYR2
+                                    
+   0049                 PrintTTYR2:
+   0049   50 71                     jms SetRAMUnit0_0                     ; back to RAM 0:0
+   004b   e1                        wmp                                   ; write to output bit. Not quite sure how they know what is being written - could be on WR pulse
+   004c   d8                        ldm 8                                 ; count 8 times in R4. Actually -8, but it's the same in 4 Bit.
+   004d   b4                        xch r4
+   004e                 _PrintLoop:
+   004e   50 64                     jms DelayBaudRate                     ; delay to set the baud rate write
+   0050   f1                        clc                                   ; rotate R2:R3 pair right 
+   0051   b2                        xch r2
+   0052   f6                        rar                                   ; RAR is a rotate through carry.
+   0053   b2                        xch r2
+   0054   b3                        xch r3
+   0055   f6                        rar
+   0056   b3                        xch r3
+   0057   f7                        tcc                                   ; put the carry in the accumulator - the least significant bit shifted out.
+   0058   e1                        wmp                                   ; set the output bit to TTY
+   0059   74 4e                     isz r4,_PrintLoop                     ; do it 8 times
+   005b   50 64                     jms DelayBaudRate                     ; do the last one (because the first was the start bit)
+   005d   d1                        ldm 1                                 ; set the output line to 1 (stop bit)
+   005e   e1                        wmp                                   
+   005f   50 64                     jms DelayBaudRate                     ; double length stop bit.
+   0061   50 64                     jms DelayBaudRate    
+   0063   c0                        bbl 0                                 ; and end.
+                        
+   00f3                 delayCount equ 0f3h                               ; Frequency is loop x 2 x 2 / 10.8us    
+   0064                 DelayBaudRate:
+   0064   20 f3                     fim r0r1,delayCount                   ; number chosen to set effective BAUD rate
+   0066                 DBRLoop1:                                         
+   0066   71 66                     isz r1,DBRLoop1                       ; this one is done 13 times (26 cycles)
+   0068   70 66                     isz r0,DBRLoop1                       ; this one once, so that makes 28 cycles + 2 for FIM
+                        
+   006a                 DelayBaudRateHalf:
+   006a   20 f3                     fim r0r1,delayCount                   ; as above. 
+   006c                 DBRLoop2:                                         
+   006c   71 6c                     isz r1,DBRLoop2                       
+   006e   70 6c                     isz r0,DBRLoop2
+   0070   c0                        bbl 0
+                        
+   0071                 SetRAMUnit0_0:
+   0071   20 00                     fim r0r1,00h                           ; Load 0 into R0,R1
+   0073   21                        src r0r1                              ; Set as default output (chip 0, register 0, address 0)
+   0074   c0                        bbl 0                                 ; return.
+                        
+   0000                           END START
+0002  C             0003  CT0           0066  DBRLoop1      006c  DBRLoop2  
+0064  DelayBaudRate    006a  DelayBaudRateHalf    000a  NC            000b  NCT0      
+0009  NT0           000c  NZ            000c  NZAC          000e  NZC       
+000f  NZCT0         0002  NZCY          000d  NZT0          0009  NZTS      
+0000  P0            0001  P1            0002  P2            0003  P3        
+0004  P4            0005  P5            0006  P6            0007  P7        
+0041  PrintCRLF     0045  PrintLF       0049  PrintTTYR2    0000  R0        
+0000  R01           0000  R0R1          0001  R1            0002  R2        
+0001  R23           0001  R2R3          0003  R3            0004  R4        
+0002  R45           0002  R4R5          0005  R5            0006  R6        
+0003  R67           0003  R6R7          0007  R7            0008  R8        
+0004  R89           0004  R8R9          0009  R9            000a  RA        
+0005  RAB           000b  RB            000c  RC            0006  RCD       
+000d  RD            000e  RE            0007  REF           000f  RF        
+0000  START         0071  SetRAMUnit0_0    0001  T0            0004  Z         
+0004  ZAC           0006  ZC            0007  ZCT0          000a  ZCY       
+0005  ZT0           0001  ZTS           004e  _PrintLoop    00f3  delayCount
+0000  r0            0000  r0r1          0001  r1            0002  r2        
+0001  r2r3          0003  r3            0004  r4            0002  r4r5      
+0005  r5            0006  r6            0003  r6r7          0007  r7        
+0008  r8            0004  r8r9          0009  r9            000a  ra        
+000b  rb            000c  rc            000d  rd            000e  re        
+000f  rf            
+
