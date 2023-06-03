@@ -1,0 +1,107 @@
+{
+
+"name":"Intellec 4",
+"maximum_steps":0,
+"delay_between_steps_ms":1,
+"delay_between_steps_ns":0,
+
+"devices":[
+	{
+		"name":"FrontPanel",
+		"type":"Intellec_4_frontpanel",
+		"configuration":[]
+	},
+	{
+		"name":"CPU",
+		"type":"Intel4004",
+		"configuration":[]
+	},
+	{
+		"name":"ROM",
+		"type":"ROMW8D8",
+		"configuration":[
+			{"key":"size", "value":1024},
+			{"key":"initialization_policy", "value":"ZERO"},
+			{"key":"load_hex", "value":"4_bit_and.hex"},
+			{"key":"invert_nibbles", "value":0}
+		]
+	},
+	{
+		"name":"DataRAM",
+		"type":"MemoryW4D4",
+		"configuration":[
+			{"key":"size", "value":500},
+			{"key":"initialization_policy", "value":"ZERO"}
+		]
+	},
+	{
+		"name":"MemoryBUS",
+		"type":"DataBusNoError",
+		"configuration":[]
+	},
+	{
+		"name":"IOBUS",
+		"type":"DataBusNoError",
+		"configuration":[]
+	},
+	{
+		"name":"ControlBUS",
+		"type":"ControlBusBasic",
+		"configuration":[
+			{"key":"signals", "value":"TEST"}
+		]
+	},
+
+	{
+		"name":"A_Switches",
+		"type":"Switches4",
+		"configuration":[
+			{"key":"name", "value":"A"},
+			{"key":"buttons", "value":"3,2,1,0"},
+			{"key":"x", "value":10},
+			{"key":"y", "value":750}
+		]
+	},
+	
+	{
+		"name":"B_Switches",
+		"type":"Switches4",
+		"configuration":[
+			{"key":"name", "value":"B"},
+			{"key":"buttons", "value":"3,2,1,0"},
+			{"key":"x", "value":350},
+			{"key":"y", "value":750}
+		]
+	},
+	
+	{
+		"name":"C_LEDS",
+		"type":"LEDs4",
+		"configuration":[
+			{"key":"name", "value":"C"},
+			{"key":"buttons", "value":"3,2,1,0"},
+			{"key":"x", "value":700},
+			{"key":"y", "value":750}
+		]
+	}
+	
+],
+
+"connections":[
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"ROM", "start":65536,"end":66560,"offset":65536},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"DataRAM", "start":524288,"end":524788,"offset":524288},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"MemoryBUS"},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"IOBUS"},
+	{"type":"attachToControlBus", "src":"CPU", "dev":"ControlBUS"},
+	{"type":"attachToDataBus", "src":"FrontPanel", "dev":"MemoryBUS"},
+	{"type":"attachToControlBus", "src":"FrontPanel", "dev":"ControlBUS"},
+	{"type":"attachGenericDevice", "src":"FrontPanel", "dev":"CPU"},
+	
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"A_Switches", "start":65536,"end":65536,"offset":65536},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"B_Switches", "start":65552,"end":65552,"offset":65552},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"C_LEDS", "start":524304,"end":524304,"offset":524304}
+	
+]
+
+
+}

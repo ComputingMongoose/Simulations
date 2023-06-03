@@ -1,0 +1,46 @@
+                        ; From SIM4-02 Hardware Simulator
+                        ; http://bitsavers.informatik.uni-stuttgart.de/components/intel/MCS4/SIM4-02_Hardware_Simulator_Dec72.pdf
+                        
+                        	RPAIRS    "ZERO7"
+   0000                 	ORG     0h
+                        
+                        ; FOUR BIT "AND" ROUTINE
+   0000   28 00         START	FIM	4,0		; LOAD ROM PORT 0 ADDRESS
+   0002   29            	SRC	4		; SEND ROM PORT ADDRESS
+   0003   ea            	RDR			; READ INPUT A
+   0004   b0            	XCH	0		; A TO REGISTER 0
+   0005   68            	INC	8		; LOAD ROM PORT 1 ADDRESS
+   0006   29            	SRC	4		; SEND ROM PORT ADDRESS
+   0007   ea            	RDR			; READ INPUT B
+   0008   b1            	XCH	1		; B TO REGISTER
+   0009   50 10         	JMS	ANDSUB		; EXECUTE "AND"
+   000b   b2            	XCH	2		; LOAD RESULT C
+   000c   e1            	WMP			; STORE AT MEMORY PORT 0
+   000d   40 00         	JUN	START		; RESTART
+   000f   00            	NOP
+                        
+   0010   f0            ANDSUB	CLB			; CLEAR ACCUMULATOR AND CARRY
+   0011   b2            	XCH	2		; CLEAR REGISTER 2
+   0012   d4            	LDM	4		; LOAD LOOP COUNT (LC)
+   0013   b0            	XCH	0		; LOAD A, LC TO REGISTER 0
+   0014   f6            	RAR			; ROTATE LEAST SIGNIfICANT BIT TO CARRY
+   0015   b0            	XCH	0		; RETURN ROTATED A TO REG 0# LC TO ACC.
+   0016   1a 22         	JNC	ROTR1	; JUMP TO ROTR1 If CARRY ZERO
+   0018   b1            	XCH	1		; LOAD B. LC TO ACCUMULATOR
+   0019   f6            	RAR			; ROTATE LEAST SIGNIfICANT BIT TO CARRY
+   001a   b1            	XCH	1		; RETURN ROTATED B TO REG. 1. LC TO ACC.
+   001b   b2            ROTR2	XCH	2		; LOAD PARTIAL RESULT C. LC TO REGISTER 2
+   001c   f6            	RAR			; ROTATE CARRY INTO PARTIAL RESULT MSB
+   001d   b2            	XCH	2		; LOAD LC. RETURN C TO REGISTER 2
+   001e   f8            	DAC			; DECREMENT THE ACCUMULATOR (LC)
+   001f   1c 13         	JNZ	ANDSUB+3	; LOOP IF LC NON ZERO
+   0021   c0            	BBL	0		; RETURN
+   0022   b1            ROTR1	XCH	1		; LOAD B. LC TO REGISTER 1
+   0023   f6            	RAR			; ROTATE B
+   0024   b1            	XCH	1		; RETURN ROTATED B TO REG. 1 LC TO ACC.
+   0025   f1            	CLC			; CLEAR CARRY
+   0026   40 1b         	JUN	ROTR2		; RETURN TO LOOP
+                        
+   0000                 	END	START
+0010  ANDSUB        0022  ROTR1         001b  ROTR2         0000  START     
+
