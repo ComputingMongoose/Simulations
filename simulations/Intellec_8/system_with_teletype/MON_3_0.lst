@@ -1,0 +1,2172 @@
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 1 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+       1/       0 :                     ; Original source from: https://mark-ogden.uk/files/intel/publications/98-022B%20intellec%208-MOD%208%20MONITOR%20V3.0-Apr75.pdf
+       2/       0 :                     ; (Intellec 8/MOD 8 Monitor, version 3.0, 14 april 1975)
+       3/       0 :                     ;
+       4/       0 :                     ; Changed for compilation with Macro Assembler v 1.42 Beta
+       5/       0 :                     ; - changed NOT with ~
+       6/       0 :                     ; - changed NOT CMSK with 00000011B, NOT PMSK with 00110000B, NOT RMSK with 00001100B 
+       7/       0 :                     ; - changed OR with |
+       8/       0 :                     ; - removed definitions of TRUE/FALSE
+       9/       0 :                     ; - changed MVI M,(JMP 0) with MVI M,44H
+      10/       0 :                     ; - changed LVER EQU 8 (for length of VERS)
+      11/       0 :                     ; - added IOMOD     LABEL     $
+      12/       0 :                     ;
+      13/       0 :                     ;
+      14/       0 :                     ; -----------------------------------------------------------------------
+      15/       0 :                     ;
+      16/       0 :                     ;         INTELLEC 8/MOD 8 MONITOR
+      17/       0 :                     ;
+      18/       0 :                     ;           FAST PROM PROGRAMMING ALGORITHM ADDED, 21 JUN 1974
+      19/       0 :                     ;
+      20/       0 :                     ;           COPYRIGHT (C) 1975
+      21/       0 :                     ;           INTEL CORPORATION
+      22/       0 :                     ;           3065 BOWERS AVENUE
+      23/       0 :                     ;           SANTA CLARA, CALIFORNIA 95051
+      24/       0 :                     ;
+      25/       0 :                     ;
+      26/       0 :                     ; <LEGAL COMMAND>  ::= <ASSIGN I/O COMMAND>
+      27/       0 :                     ;                      <BNPF PUNCH COMMAND>
+      28/       0 :                     ;                      <COMPARE COMMAND>
+      29/       0 :                     ;                      <DISPLAY MEMORY COMMAND>
+      30/       0 :                     ;                      <ENDFILE COMMAND>
+      31/       0 :                     ;                      <FILL MEMORY COMMAND>
+      32/       0 :                     ;                      <PROGRAM EXECUTE COMMAND>
+      33/       0 :                     ;                      <HEXADECIMAL ARITHMETIC COMMAND>
+      34/       0 :                     ;                      <LOAD BNPF COMMAND>
+      35/       0 :                     ;                      <MOVE MEMORY COMMAND>
+      36/       0 :                     ;                      <LEADER COMMAND>
+      37/       0 :                     ;                      <PROGRAM COMMAND>
+      38/       0 :                     ;                      <READ HEXADECIMAL FILE COMMAND>
+      39/       0 :                     ;                      <SUBSTITUTE MEMORY COMMAND>
+      40/       0 :                     ;                      <TRANSFER COMMAND>
+      41/       0 :                     ;                      <WRITE HEXADECIMAL RECORD COMMAND>
+      42/       0 :                     ;                      <REGISTER MODIFY COMMAND>
+      43/       0 :                     ;
+      44/       0 :                     ; <ASSIGN I/O COMMAND> ::= A<LOGICAL DEVICE>=<PHYSICAL DEVICE>
+      45/       0 :                     ; <BNPF PUNCH COMMAND> ::= B<NUMBER,NUMBER>
+      46/       0 :                     ; <COMPARE COMMAND> ::= C<NUMBER>
+      47/       0 :                     ; <DISPLAY MEMORY COMMAND> ::= D<NUMBER,NUMBER>
+      48/       0 :                     ; <ENDFILE COMMAND> ::= E<NUMBER>
+      49/       0 :                     ; <FILL MEMORY COMMAND> ::= F<NUMBER>,<NUMBER>,<NUMBER>
+      50/       0 :                     ; <PROGRAM EXECUTE COMMAND> ::= G<NUMBER>
+      51/       0 :                     ; <HEXADECIMAL ARITHMETIC COMMAND> ::= H<NUMBER>,<NUMBER>
+      52/       0 :                     ; <LOAD BNPF COMMAND> ::= L<NUMBER>,<NUMBER>
+      53/       0 :                     ; <MOVE MEMORY COMMAND> ::= M<NUMBER>,<NUMBER>,<NUMBER>
+      54/       0 :                     ; <LEADER COMMAND> ::= N
+      55/       0 :                     ; <PROGRAM COMMAND> ::= P<NUMBER>,<NUMBER>,<NUMBER>
+      56/       0 :                     ; <READ HEXADECIMAL COMMAND> ::= R<NUMBER>
+      57/       0 :                     ; <SUBSTITUTE MEMORY COMMAND> ::= S<NUMBER>
+      58/       0 :                     ; <TRANSFER COMMAND> ::= T<NUMBER>
+      59/       0 :                     ; <WRITE HEXADECIMAL RECORD COMMAND> ::= W<NUMBER>,<NUMBER>
+      60/       0 :                     ;
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 2 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+      61/       0 :                     ; <LOGICAL DEVICE> ::= CONSOLE!READER!LIST!PUNCH
+      62/       0 :                     ;
+      63/       0 :                     ; <PHYSICAL DEVICE> ::= CRT!TTY!PTR!PTP!BATCH!1!2
+      64/       0 :                     ;
+      65/       0 :                     ; <NUMBER> ::=         <HEX DIGIT>
+      66/       0 :                     ;              <NUMBER><HEX DIGIT>
+      67/       0 :                     ; 
+      68/       0 :                     ; <HEX DIGIT> ::= 0!1!2!3!4!5!6!7!8!9!A!B!C!D!E!F
+      69/       0 :                     ;
+      70/       0 :                     ; SYSTEM SIGNS ON WITH <CR><LF><.>
+      71/       0 :                     ;
+      72/       0 : =1EH                 VER       EQU       30        ; VERSION 3.0
+      73/       0 :                               TITLE       ' INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975'
+      74/       0 :                     ;
+      75/       0 :                     ; CONDITIONAL ASSEMBLY SWITCHES
+      76/       0 :                     ;
+      77/       0 :                     ;FALSE     EQU       0                  ; ALREADY AVAILABLE IN AS
+      78/       0 :                     ;TRUE      EQU       NOT FALSE
+      79/       0 : =0H                  DEBUG     EQU       FALSE               ; DEBUG MODE -
+      80/       0 :                                                             ; MODIFY CERTAIN CODE SECTIONS
+      81/       0 :                                                             ; SO THAT THE 8008 VERSION 2.0
+      82/       0 :                                                             ; MONITOR MAY BE ASSEMBLED BY
+      83/       0 :                                                             ; MAC80 AND DEBUGGED BY THE 8080
+      84/       0 :                                                             ; VERSION 1.0 MONITOR 
+      85/       0 :                     
+      86/       0 : =>FALSE                        IF        DEBUG
+      87/       0 :                     BIAS      EQU       0
+      88/       0 : [86]                           ENDIF
+      89/       0 :                     
+      90/       0 : =>TRUE                         IF        ~DEBUG
+      91/       0 : =8H                  BIAS      EQU       8                   ; ASSIGN PROPER NUMERIC VALUES TO
+      92/       0 :                                                             ; OUTPUT PORTS FOR THE 8080
+      93/       0 : [90]                           ENDIF
+      94/       0 :                     ;
+      95/       0 :                     ; I/O DEVICE OUTPUT COMMAND PORT 1 (TTC) BIT VALUES
+      96/       0 :                     ; 
+      97/       0 :                     ; BIT     REST      MNEMONIC            DESCRIPTION
+      98/       0 :                     ;
+      99/       0 :                     ; 0       0         RBIT                TTY READER GO/NO GO
+     100/       0 :                     ; 1       0         PCMD                PTP GO/NO GO
+     101/       0 :                     ; 2       0         RCMD                PTR GO/NO GO
+     102/       0 :                     ; 3       1         DSB                 PROM ENABLE/DISABLE, DSB=1
+     103/       0 :                     ; 4       0                             DATA IN T/C
+     104/       0 :                     ; 5       0                             DATA OUT T/C
+     105/       0 :                     ; 6       0         PBIT                1702 PROM PROG. GO/NO GO
+     106/       0 :                     ; 7       0         PBITA               1702A PROM PROG. GO/NO GO
+     107/       0 :                     ;
+     108/       0 :                     ; I/O DEVICE INPUT STATUS PORT 1 (TTS) BIT VALUES
+     109/       0 :                     ;
+     110/       0 :                     ; BIT     REST      MNEMONIC            DESCRIPTION
+     111/       0 :                     ;
+     112/       0 :                     ; 0       1         TTYDA               IF TTYDA = 0, INPUT IS READY
+     113/       0 :                     ; 1       1                             OVERRUN ERROR
+     114/       0 :                     ; 2       0         TTYBE               IF TTYBE = 0, OUTPUT IS READY
+     115/       0 :                     ; 3       1                             FRAMING ERROR
+     116/       0 :                     ; 4       1                             PARITY ERROR
+     117/       0 :                     ; 5       0         PTRDA               IF PTRDA = 1, PTR HAS CHAR
+     118/       0 :                     ; 6       1         PRDY                IF PRDY = 1, PTP IS READY
+     119/       0 :                     ; 7                                     UNASSIGNED
+     120/       0 :                     ;
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 3 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     121/       0 :                     ; I/O DEVICE INPUT STATUS PORT 5 (CRTS) BIT VALUES
+     122/       0 :                     ; 
+     123/       0 :                     ; BIT     REST      MNEMONIC            DESCRIPTION
+     124/       0 :                     ;
+     125/       0 :                     ; 0       1         CRTDA               IF CRTDA = 0, INPUT IS READY
+     126/       0 :                     ; 1       1                             OVERRUN ERROR
+     127/       0 :                     ; 2       0         CRTBE               IF CRTBE = 0, OUTPUT IS READY
+     128/       0 :                     ; 3       1                             FRAMING ERROR
+     129/       0 :                     ; 4       1                             PARITY ERROR
+     130/       0 :                     ; 5                                     UNASSIGNED
+     131/       0 :                     ; 6                                     UNASSIGNED
+     132/       0 :                     ; 7                                     UNASSIGNED
+     133/       0 :                     ;
+     134/       0 :                     ; I/O COMMAND CONSTANTS
+     135/       0 :                     ;
+     136/       0 : =1H                  RBIT      EQU       1
+     137/       0 : =2H                  PCMD      EQU       2
+     138/       0 : =4H                  RCMD      EQU       4
+     139/       0 : =8H                  DSB       EQU       8
+     140/       0 : =80H                 PBITA     EQU       80H
+     141/       0 :                     ;
+     142/       0 :                     ; TTY I/O CONSTANTS
+     143/       0 :                     ;
+     144/       0 : =0H                  TTI       EQU       0                   ; TTY INPUT DATA PORT
+     145/       0 : =8H                  TTO       EQU       BIAS+0              ; TTY OUTPUT DATA PORT
+     146/       0 : =1H                  TTS       EQU       1                   ; TTY INPUT STATUS PORT
+     147/       0 : =9H                  TTC       EQU       BIAS+1              ; TTY OUTPUT COMMAND PORT
+     148/       0 : =9H                  TTYGO     EQU       RBIT | DSB          ; START TTY READER
+     149/       0 : =8H                  TTYNO     EQU       DSB                 ; STOP TTY READER
+     150/       0 : =1H                  TTYDA     EQU       1                   ; DATA AVAILABLE
+     151/       0 : =4H                  TTYBE     EQU       4                   ; TRANSMIT BUFFER EMPTY
+     152/       0 :                     ;
+     153/       0 :                     ; CRT I/O CONSTANTS
+     154/       0 :                     ;
+     155/       0 : =4H                  CRTI      EQU       4                   ; CRT INPUT DATA PORT
+     156/       0 : =5H                  CRTS      EQU       5                   ; CRT INPUT STATUS PORT
+     157/       0 : =0CH                 CRTO      EQU       BIAS+4              ; CRT OUTPUT DATA PORT
+     158/       0 : =1H                  CRTDA     EQU       1                   ; DATA AVAILABLE
+     159/       0 : =4H                  CRTBE     EQU       4                   ; TRANSMIT BUFFER EMPTY
+     160/       0 :                     ;
+     161/       0 :                     ; PTR I/O CONSTANTS
+     162/       0 :                     ;
+     163/       0 : =3H                  PTRI      EQU       3                   ; PTR INPUT DATA PORT (NOT INVERTED)
+     164/       0 : =1H                  PTRS      EQU       TTS                 ; PTR INPUT STATUS PORT
+     165/       0 : =9H                  PTRC      EQU       TTC                 ; PTR OUTPUT COMMAND PORT
+     166/       0 : =0CH                 PTRGO     EQU       RCMD | DSB          ; START PTR
+     167/       0 : =8H                  PTRNO     EQU       TTYNO               ; STOP PTR
+     168/       0 : =20H                 PTRDA     EQU       20H                 ; PTR DATA AVAILABLE
+     169/       0 :                     ;
+     170/       0 :                     ; PTP I/O CONSTANTS
+     171/       0 :                     ;
+     172/       0 : =0BH                 PTPO      EQU       BIAS+3              ; PTP OUTPUT DATA PORT
+     173/       0 : =1H                  PTPS      EQU       TTS                 ; PTP INPUT STATUS PORT
+     174/       0 : =9H                  PTPC      EQU       TTC                 ; PTP OUTPUT COMMNAND PORT
+     175/       0 : =40H                 PRDY      EQU       40H                 ; PUNCH READY STATUS
+     176/       0 : =0AH                 PTPGO     EQU       PCMD | DSB          ; START PUNCH
+     177/       0 : =8H                  PTPNO     EQU       TTYNO               ; STOP PUNCH
+     178/       0 :                     ;
+     179/       0 :                     ; PROM PROGRAMMER I/O CONSTANTS
+     180/       0 :                     ;
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 4 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     181/       0 : =0AH                 PAD       EQU       BIAS+2              ; PROM ADDRESS OUTPUT PORT
+     182/       0 : =0BH                 PDO       EQU       PTPO                ; PROM DATA OUTPUT PORT
+     183/       0 : =2H                  PDI       EQU       2                   ; PROM DATA INPUT PORT
+     184/       0 : =9H                  PROMC     EQU       TTC                 ; PROGRAMMING PULSE OUTPUT PORT
+     185/       0 : =80H                 PROGO     EQU       PBITA               ; START PROGRAMMING
+     186/       0 : =0H                  PRONO     EQU       0                   ; STOP PROGRAMMING
+     187/       0 : =0H                  ENB       EQU       0
+     188/       0 :                     ;
+     189/       0 :                     ; GLOBAL CONSTANTS
+     190/       0 :                     ;
+     191/       0 : =0FAH                TOUT      EQU       250                 ; 250 MS COUNTER FOR READER TIMEOUT
+     192/       0 : =14H                 LDLY      EQU       20                  ; COUNTER FOR 20 MS DELAY
+     193/       0 : =>FALSE                        IF        DEBUG
+     194/       0 :                     DLY       EQU       111                 ; 1 MS DELAY FOR 8080 DEBUG
+     195/       0 : [193]                          ENDIF
+     196/       0 : =>TRUE                         IF        ~DEBUG
+     197/       0 : =17H                 DLY       EQU       23                  ; COUNTER FOR 1 MS DELAY
+     198/       0 : [196]                          ENDIF
+     199/       0 : =0DH                 CR        EQU       0DH                 ; ASCII VALUE OF CARRIAGE RETURN
+     200/       0 : =0AH                 LF        EQU       0AH                 ; ASCII VALUE OF LINE FEED
+     201/       0 :                     ;
+     202/       0 :                     ; MACRO DEFINITIONS
+     203/       0 :                     ;
+     204/       0 : =1H                  FIRST     SET       TRUE
+     205/       0 :                     MODIO     MACRO     TABLE,MASK
+     206/       0 :                               LXI       D,TABLE             ; ADDRESS OF PHYSICAL UNIT TABLE
+     207/       0 :                               MVI       C,MASK              ; C = SELECT BIT MASK
+     208/       0 :                               IF        FIRST               ; EMITS THIS CODE ONCE,
+     209/       0 :                                                             ;  BRANCH TO IT THEREAFTER
+     210/       0 :                     IOMOD:
+     211/       0 :                     IOMOD     LABEL     $                   ; added for AS
+     212/       0 :                     FIRST     SET       FALSE
+     213/       0 :                               CALL      NOISE               ; SCAN INPUT AND ECHO UNTIL
+     214/       0 :                                                             ; PHYSICAL DEVICE CHAR IS ENCOUNTERED
+     215/       0 :                               MVI       B,4                 ; SET TABLE LENGTH
+     216/       0 :                               MOV       H,D
+     217/       0 :                               MOV       L,E
+     218/       0 :                               CALL      TEST                ; COMPARE PHYSICAL DEVICE AGAINST
+     219/       0 :                               CALL      INCHL
+     220/       0 :                               MOV       E,M                 ; TABLE, RETURN HL -> BIT PATTERN
+     221/       0 :                     SCANOUT:
+     222/       0 :                               CALL      TI
+     223/       0 :                               CPI       CR
+     224/       0 :                               JNZ       SCANOUT             ; SCAN PAST CR
+     225/       0 :                               LXI       H,IOBYT             ; GET I/O STATUS
+     226/       0 :                               MOV       A,M
+     227/       0 :                               ANA       C                   ; CLEAR FIELD
+     228/       0 :                               ORA       E                   ; SET NEW STATUS
+     229/       0 :                               MOV       M,A                 ; RETURN TO MEMORY
+     230/       0 :                               JMP       START
+     231/       0 :                     TEST:                                   ; INDEX THROUGH PHYSICAL UNIT TABLE
+     232/       0 :                               CMP       M                   ; COMPARE DEVICE CHAR WITH LEGAL VALUES
+     233/       0 :                               RZ                            ; RETURN WITH HL -> DEVICE SELECT BITS
+     234/       0 :                               CALL      INCHL
+     235/       0 :                               CALL      INCHL
+     236/       0 :                               DCR       B
+     237/       0 :                               JNZ       TEST                ; CONTINUE LOOKUP
+     238/       0 :                               JMP       LER                 ; ERROR RETURN
+     239/       0 :                               ENDIF
+     240/       0 :                               IF        ~FIRST
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 5 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     241/       0 :                               JMP       IOMOD
+     242/       0 :                               ENDIF
+     243/       0 :                               ENDM
+     244/       0 :                     ;
+     245/       0 :                     ; I/O STATUS BYTE MASKS AND VALUES
+     246/       0 :                     ;
+     247/       0 : =0FCH                CMSK      EQU       11111100B           ; MASK FOR CONSOLE I/O
+     248/       0 : =0F3H                RMSK      EQU       11110011B           ; MASK FOR READER INPUT
+     249/       0 : =0CFH                PMSK      EQU       11001111B           ; MASK FOR PUNCH OUTPUT
+     250/       0 : =3FH                 LMSK      EQU       00111111B           ; MASK FOR LIST OUTPUT
+     251/       0 :                     ;
+     252/       0 : =0H                  CTTY      EQU       00000000B           ; CONSOLE I/O = TTY
+     253/       0 : =1H                  CCRT      EQU       00000001B           ; CONSOLE I/O = CRT
+     254/       0 : =2H                  BATCH     EQU       00000010B           ; BATCH MODE
+     255/       0 :                                                             ; INPUT = READER, OUTPUT = LIST
+     256/       0 : =3H                  CUSE      EQU       00000011B           ; USER DEFINED CONSOLE I/O
+     257/       0 : =0H                  RTTY      EQU       00000000B           ; READER = TTY
+     258/       0 : =4H                  RPTR      EQU       00000100B           ; READER = PTR
+     259/       0 : =8H                  RUSE1     EQU       00001000B           ; USER DEFINED READER (1)
+     260/       0 : =0CH                 RUSE2     EQU       00001100B           ; USER DEFINED READER (2)
+     261/       0 : =0H                  PTTY      EQU       00000000B           ; PUNCH = TTY
+     262/       0 : =10H                 PPTP      EQU       00010000B           ; PUNCH = PTP
+     263/       0 : =20H                 PUSE1     EQU       00100000B           ; USER DEFINED PUNCH (1)
+     264/       0 : =30H                 PUSE2     EQU       00110000B           ; USER DEFINED PUNCH (2)
+     265/       0 : =0H                  LTTY      EQU       00000000B           ; LIST = TTY
+     266/       0 : =40H                 LCRT      EQU       01000000B           ; LIST = CRT
+     267/       0 : =80H                 LUSE1     EQU       10000000B           ; LIST = LPT
+     268/       0 : =0C0H                LUSE2     EQU       11000000B           ; USER DEFINED LIST
+     269/       0 :                     ;
+     270/       0 :                     ; USER DEFINED DEVICE ENTRY POINTS
+     271/       0 :                     ;
+     272/       0 : =3700H               CILOC     EQU       3700H               ; USER CONSOLE INPUT
+     273/       0 : =3703H               COLOC     EQU       3703H               ; USER CONSOLE OUTPUT
+     274/       0 : =3706H               R1LOC     EQU       3706H               ; USER READER 1
+     275/       0 : =3709H               R2LOC     EQU       3709H               ; USER READER 2
+     276/       0 : =370CH               P1LOC     EQU       370CH               ; USER PUNCH 1
+     277/       0 : =370FH               P2LOC     EQU       370FH               ; USER PUNCH 2
+     278/       0 : =3712H               L1LOC     EQU       3712H               ; USER LIST 1
+     279/       0 : =3715H               L2LOC     EQU       3715H               ; USER LIST 2
+     280/       0 : =3718H               CSLOC     EQU       3718H               ; USER CONSOLE STATUS
+     281/       0 :                     ;
+     282/       0 :                     ; POINTERS TO RAM
+     283/       0 :                     ;
+     284/       0 : =>TRUE                         IF        ~DEBUG
+     285/       3 :                               ORG       3                   ; LOCATION OF RAM STORAGE AREA
+     286/       3 : [284]                          ENDIF
+     287/       3 :                               
+     288/       3 : =>FALSE                        IF        DEBUG
+     289/       3 :                               ORG       100H
+     290/       3 : [288]                          ENDIF
+     291/       3 :                               
+     292/       3 :                     IOBYT:
+     293/       3 :                               DS        1                   ; I/O STATUS BYTE
+     294/       4 :                     HPRIME:
+     295/       4 :                               DS        2                   ; TEMP FOR HL
+     296/       6 :                     CBRCH:
+     297/       6 :                               DS        2                   ; CASE BRANCH LOCATION
+     298/       8 :                     ADR1:
+     299/       8 :                               DS        2                   ; FIRST PARAMETER
+     300/       A :                     ADR2:
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 6 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     301/       A :                               DS        2                   ; SECOND PARAMETER
+     302/       C :                     ADR3:
+     303/       C :                               DS        2                   ; THIRD PARAMETER
+     304/       E :                               
+     305/       E : =>FALSE                        IF        DEBUG
+     306/       E :                               ORG       800H                ; LOCATE IN RAM FOR DEBUG
+     307/       E : [305]                          ENDIF
+     308/       E :                               
+     309/       E : =>TRUE                         IF        ~DEBUG
+     310/    3800 :                               ORG       3800H               ; LOCATE IN TOP 8 ROMS IN 16K
+     311/    3800 : [309]                          ENDIF
+     312/    3800 :                               
+     313/    3800 :                     ;
+     314/    3800 :                     ; BRANCH TABLE FOR I/O SYSTEM
+     315/    3800 :                     ;
+     316/    3800 : 44 29 38                      JMP       BEGIN               ; RESET ENTRY POINT
+     317/    3803 : 44 96 3C                      JMP       CI                  ; CONSOLE INPUT
+     318/    3806 : 44 DB 3E                      JMP       RI                  ; READER INPUT
+     319/    3809 : 44 52 3C                      JMP       CO                  ; CONSOLE OUTPUT
+     320/    380C : 44 B5 3E                      JMP       PO                  ; PUNCH OUTPUT
+     321/    380F : 44 2C 3E                      JMP       LO                  ; LIST OUTPUT
+     322/    3812 : 44 D6 3C                      JMP       CSTS                ; CONSOLE INPUT STATUS
+     323/    3815 : 44 F4 3D                      JMP       IOCHK               ; I/O SYSTEM STATUS
+     324/    3818 : 44 FA 3D                      JMP       IOSET               ; SET I/O CONFIGURATION
+     325/    381B : 44 43 3E                      JMP       MEMCK               ; COMPUTE SIZE OF MEMORY
+     326/    381E :                     ;
+     327/    381E :                     ; INITIAL CONDITIONS FOR I/O SYSTEM
+     328/    381E :                     ;
+     329/    381E : =0H                  INIT      EQU       0                   ; INITIALLY,
+     330/    381E :                                                             ; CONSOLE = TTY,
+     331/    381E :                                                             ; READER = TTY,
+     332/    381E :                                                             ; PUNCH = TTY,
+     333/    381E :                                                             ; LIST = TTY
+     334/    381E : 0D 0A 38 30 30 38   VERS:     DB        CR,LF,'8008 V'
+             3824 : 20 56             
+     335/    3826 :                               
+     336/    3826 : =>TRUE                         IF        ~DEBUG
+     337/    3826 : 33 2E 30                      DB        VER/10+'0','.',(VER # 10)+'0'
+     338/    3829 : [336]                          ENDIF
+     339/    3829 :                               
+     340/    3829 : =>FALSE                        IF        DEBUG
+     341/    3829 :                               DB        'X.X'
+     342/    3829 : [340]                          ENDIF
+     343/    3829 :                               
+     344/    3829 : =0BH                 LVER      EQU       11                   ; LENGTH(VERS) 
+     345/    3829 :                     ;
+     346/    3829 :                     ; PROGRAM ENTRY POINT
+     347/    3829 :                     ;
+     348/    3829 :                     ; LOCATE THE STACK IN THE TOP OF AVAILABLE RAM
+     349/    3829 :                     ;
+     350/    3829 :                     BEGIN:
+     351/    3829 : 2E 00 36 03                   LXI       H,IOBYT             ; POINT HL AT IOBYT
+     352/    382D : 3E 00                         MVI       M,INIT              ; INITIAL VALUE OF I/O
+     353/    382F :                     ;
+     354/    382F :                     ; TYPE SIGN-ON
+     355/    382F :                     ;
+     356/    382F : 2E 38 36 1E                   LXI       H,VERS              ; ADDRESS OF MESSAGE
+     357/    3833 : 16 0B                         MVI       C,LVER              ; LENGTH OF MESSAGE
+     358/    3835 :                     VERO:
+     359/    3835 : CF                            MOV       B,M
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 7 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     360/    3836 : 46 F0 3D                      CALL      INCHL
+     361/    3839 : DD                            MOV       D,H
+     362/    383A : E6                            MOV       E,L
+     363/    383B : 46 52 3C                      CALL      CO
+     364/    383E : EB                            MOV       H,D
+     365/    383F : F4                            MOV       L,E
+     366/    3840 : 11                            DCR       C
+     367/    3841 : 48 35 38                      JNZ       VERO
+     368/    3844 :                     ;
+     369/    3844 :                     ; MAIN COMMAND LOOP
+     370/    3844 :                     ;
+     371/    3844 :                     ; THIS LOOP IS THE STARTING POINT OF ALL COMMAND SEQUENCES.
+     372/    3844 :                     ; IN THIS CODE ALL I/O DEVICES ARE INITIALIZED, A CARRIAGE
+     373/    3844 :                     ; RETURN AND LINE FEED ARE TYPED, ALONG WITH THE PROMPT
+     374/    3844 :                     ; CHARACTER '.'. WHEN A CHARACTER IS ENTERED FROM THE
+     375/    3844 :                     ; CONSOLE KEYBOARD, IT IS CHECKED FOR VALIDITY, THEN A
+     376/    3844 :                     ; BRANCH TO THE PROPER PROCESSING ROUTINE IS COMPUTED.
+     377/    3844 :                     ;
+     378/    3844 :                     START:
+     379/    3844 : 06 08                         MVI       A,TTYNO             ; RESET TTY,PTR,PTP
+     380/    3846 : 53                            OUT       TTC                 ; RESET READER
+     381/    3847 : 46 CC 3C                      CALL      CRLF                ; TYPE <CR>,<LF>
+     382/    384A : 0E 2E                         MVI       B,'.'               
+     383/    384C : 46 52 3C                      CALL      CO                  ; OUTPUT A PERIOD
+     384/    384F : 46 49 3F                      CALL      TI                  ; GET A CHARACTER
+     385/    3852 : 14 41                         SUI       'A'                 ; TEST FOR A-W
+     386/    3854 : 70 44 38                      JM        START               ; LT A, ERROR
+     387/    3857 : 3C 17                         CPI       'W'-'A'+1
+     388/    3859 : 50 48 3C                      JP        LER                 ; GT W, ERROR
+     389/    385C : 80                            ADD       A                   ; *2
+     390/    385D : 2E 38 36 75                   LXI       H,TBL               ; ADDRESS OF TABLE
+     391/    3861 : 86                            ADD       L                   ; ADD BIAS
+     392/    3862 : F0                            MOV       L,A
+     393/    3863 : E7                            MOV       E,M                 ; GET ADDRESS IN D,E
+     394/    3864 : 30                            INR       L
+     395/    3865 : DF                            MOV       D,M
+     396/    3866 :                     GO:
+     397/    3866 : 2E 00 36 06                   LXI       H,CBRCH             ; ADDRESS OF JMP INSTRUCTION
+     398/    386A : 3E 44                         MVI       M,44H ;(JMP 0)           ; STUFF OPCODE
+     399/    386C : 30                            INR       L
+     400/    386D : FC                            MOV       M,E                 ; STUFF 8 LSB
+     401/    386E : 30                            INR       L
+     402/    386F : FB                            MOV       M,D                 ; STUFF 8 MSB
+     403/    3870 : 16 02                         MVI       C,2                 ; SETUP C FOR TWO PARAMETER COMMANDS
+     404/    3872 : 44 06 00                      JMP       CBRCH               ; GO DO IT
+     405/    3875 :                     ;
+     406/    3875 :                     ; COMMAND BRANCH TABLE
+     407/    3875 :                     ;
+     408/    3875 :                     ; THIS TABLE CONTAINS THE ADDRESSES OF THE ENTRY POINTS OF 
+     409/    3875 :                     ; ALL THE COMMAND PROCESSING ROUTINES. NOTE THAT AN ENTRY TO 'LER'
+     410/    3875 :                     ; IS AN ERROR CONDITION, I.E., NO COMMAND CORRESPONDING TO THAT 
+     411/    3875 :                     ; CHARACTER EXISTS.
+     412/    3875 :                     ;
+     413/    3875 :                     TBL:
+     414/    3875 : A3 38                         DW        ASSIGN              ; A = ASSIGN I/O UNITS
+     415/    3877 : 0E 39                         DW        BNPF                ; B = PUNCH BNPF
+     416/    3879 : 67 39                         DW        COMP                ; C = COMPARE PROM WITH MEMORY
+     417/    387B : AC 39                         DW        DISP                ; D = DISPLAY RAM MEMORY
+     418/    387D : D7 39                         DW        EOF                 ; E = ENDFILE A HEXADECIMAL FILE
+     419/    387F : 03 3A                         DW        FILL                ; F = FILL MEMORY
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 8 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     420/    3881 : 16 3A                         DW        GOTO                ; G = GOTO MEMORY ADDRESS
+     421/    3883 : 1D 3A                         DW        HEXN                ; H = HEXADECIMAL SUM AND DIFFERENCE
+     422/    3885 : 48 3C                         DW        LER                 ; I =
+     423/    3887 : 48 3C                         DW        LER                 ; J =
+     424/    3889 : 48 3C                         DW        LER                 ; K =
+     425/    388B : 48 3A                         DW        LOAD                ; L = LOAD BNPF TAPE
+     426/    388D : 62 3A                         DW        MOVE                ; M = MOVE MEMORY
+     427/    388F : 8E 3A                         DW        NULL                ; N = PUNCH NULLS FOR LEADER
+     428/    3891 : 48 3C                         DW        LER                 ; O =
+     429/    3893 : 94 3A                         DW        PROG                ; P = PROGRAM A 1702A PROM
+     430/    3895 : 48 3C                         DW        LER                 ; Q =
+     431/    3897 : F8 3A                         DW        READ                ; R = READ HEXADECIMAL FILE
+     432/    3899 : 6A 3B                         DW        SUBS                ; S = SUBSTITUTE MEMORY
+     433/    389B : B9 3B                         DW        TRAN                ; T = TRANSFER A PROM TO MEMORY
+     434/    389D : 48 3C                         DW        LER                 ; U =
+     435/    389F : 48 3C                         DW        LER                 ; V = 
+     436/    38A1 : DA 3B                         DW        WRITE               ; W = WRITE HEX TAPE
+     437/    38A3 :                     ;
+     438/    38A3 :                     ; PROCESS I/O DEVICE ASSIGNMENT COMMANDS
+     439/    38A3 :                     ;
+     440/    38A3 :                     ; THIS ROUTINE MAPS SYMBOLIC DEVICE IDENTIFIERS TO BITS
+     441/    38A3 :                     ; IN THE I/O STATUS BYTE (IOBYT) TO ALLOW FOR CONSOLE 
+     442/    38A3 :                     ; MODIFICATION OF SYSTEM I/O CONFIGURATION
+     443/    38A3 :                     ;
+     444/    38A3 :                     ASSIGN:
+     445/    38A3 : 46 49 3F                      CALL      TI                  ; GET LOGICAL DEVICE CHARACTER
+     446/    38A6 : 3C 43                         CPI       'C'                 ; CONSOLE?
+     447/    38A8 : 48 E4 38                      JNZ       AS0                 ; TEST FOR READER
+     448/    38AB : (MACRO)                        MODIO     ICT,CMSK            ; MODIFY CONSOLE DEVICE
+     448/    38AB : 1E 3F 26 54                   LXI       D,ICT             ; ADDRESS OF PHYSICAL UNIT ICT
+     448/    38AF : 16 FC                         MVI       C,CMSK              ; C = SELECT BIT CMSK
+     448/    38B1 : =>TRUE                         IF        FIRST               ; EMITS THIS CODE ONCE,
+     448/    38B1 :                                                             ;  BRANCH TO IT THEREAFTER
+     448/    38B1 :                     IOMOD:
+     448/    38B1 : =38B1H               IOMOD     LABEL     $                   ; added for AS
+     448/    38B1 : =0H                  FIRST     SET       FALSE
+     448/    38B1 : 46 6A 3E                      CALL      NOISE               ; SCAN INPUT AND ECHO UNTIL
+     448/    38B4 :                                                             ; PHYSICAL DEVICE CHAR IS ENCOUNTERED
+     448/    38B4 : 0E 04                         MVI       B,4                 ; SET ICT LENGTH
+     448/    38B6 : EB                            MOV       H,D
+     448/    38B7 : F4                            MOV       L,E
+     448/    38B8 : 46 D2 38                      CALL      TEST                ; COMPARE PHYSICAL DEVICE AGAINST
+     448/    38BB : 46 F0 3D                      CALL      INCHL
+     448/    38BE : E7                            MOV       E,M                 ; ICT, RETURN HL -> BIT PATTERN
+     448/    38BF :                     SCANOUT:
+     448/    38BF : 46 49 3F                      CALL      TI
+     448/    38C2 : 3C 0D                         CPI       CR
+     448/    38C4 : 48 BF 38                      JNZ       SCANOUT             ; SCAN PAST CR
+     448/    38C7 : 2E 00 36 03                   LXI       H,IOBYT             ; GET I/O STATUS
+     448/    38CB : C7                            MOV       A,M
+     448/    38CC : A2                            ANA       C                   ; CLEAR FIELD
+     448/    38CD : B4                            ORA       E                   ; SET NEW STATUS
+     448/    38CE : F8                            MOV       M,A                 ; RETURN TO MEMORY
+     448/    38CF : 44 44 38                      JMP       START
+     448/    38D2 :                     TEST:                                   ; INDEX THROUGH PHYSICAL UNIT ICT
+     448/    38D2 : BF                            CMP       M                   ; COMPARE DEVICE CHAR WITH LEGAL VALUES
+     448/    38D3 : 2B                            RZ                            ; RETURN WITH HL -> DEVICE SELECT BITS
+     448/    38D4 : 46 F0 3D                      CALL      INCHL
+     448/    38D7 : 46 F0 3D                      CALL      INCHL
+     448/    38DA : 09                            DCR       B
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 9 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     448/    38DB : 48 D2 38                      JNZ       TEST                ; CONTINUE LOOKUP
+     448/    38DE : 44 48 3C                      JMP       LER                 ; ERROR RETURN
+     448/    38E1 : [448]                          ENDIF
+     448/    38E1 : =>TRUE                         IF        ~FIRST
+     448/    38E1 : 44 B1 38                      JMP       IOMOD
+     448/    38E4 : [448]                          ENDIF
+     449/    38E4 :                     AS0:
+     450/    38E4 : 3C 52                         CPI       'R'                 ; READER ?
+     451/    38E6 : 48 F2 38                      JNZ       AS1                 ; TEST FOR PUNCH
+     452/    38E9 : (MACRO)                        MODIO     IRT,RMSK            ; MODIFY READER DEVICE
+     452/    38E9 : 1E 3F 26 5C                   LXI       D,IRT             ; ADDRESS OF PHYSICAL UNIT IRT
+     452/    38ED : 16 F3                         MVI       C,RMSK              ; C = SELECT BIT RMSK
+     452/    38EF : =>FALSE                        IF        FIRST               ; EMITS THIS CODE ONCE,
+     452/    38EF :                                                             ;  BRANCH TO IT THEREAFTER
+     452/    38EF :                     IOMOD:
+     452/    38EF :                     IOMOD     LABEL     $                   ; added for AS
+     452/    38EF :                     FIRST     SET       FALSE
+     452/    38EF :                               CALL      NOISE               ; SCAN INPUT AND ECHO UNTIL
+     452/    38EF :                                                             ; PHYSICAL DEVICE CHAR IS ENCOUNTERED
+     452/    38EF :                               MVI       B,4                 ; SET IRT LENGTH
+     452/    38EF :                               MOV       H,D
+     452/    38EF :                               MOV       L,E
+     452/    38EF :                               CALL      TEST                ; COMPARE PHYSICAL DEVICE AGAINST
+     452/    38EF :                               CALL      INCHL
+     452/    38EF :                               MOV       E,M                 ; IRT, RETURN HL -> BIT PATTERN
+     452/    38EF :                     SCANOUT:
+     452/    38EF :                               CALL      TI
+     452/    38EF :                               CPI       CR
+     452/    38EF :                               JNZ       SCANOUT             ; SCAN PAST CR
+     452/    38EF :                               LXI       H,IOBYT             ; GET I/O STATUS
+     452/    38EF :                               MOV       A,M
+     452/    38EF :                               ANA       C                   ; CLEAR FIELD
+     452/    38EF :                               ORA       E                   ; SET NEW STATUS
+     452/    38EF :                               MOV       M,A                 ; RETURN TO MEMORY
+     452/    38EF :                               JMP       START
+     452/    38EF :                     TEST:                                   ; INDEX THROUGH PHYSICAL UNIT IRT
+     452/    38EF :                               CMP       M                   ; COMPARE DEVICE CHAR WITH LEGAL VALUES
+     452/    38EF :                               RZ                            ; RETURN WITH HL -> DEVICE SELECT BITS
+     452/    38EF :                               CALL      INCHL
+     452/    38EF :                               CALL      INCHL
+     452/    38EF :                               DCR       B
+     452/    38EF :                               JNZ       TEST                ; CONTINUE LOOKUP
+     452/    38EF :                               JMP       LER                 ; ERROR RETURN
+     452/    38EF : [452]                          ENDIF
+     452/    38EF : =>TRUE                         IF        ~FIRST
+     452/    38EF : 44 B1 38                      JMP       IOMOD
+     452/    38F2 : [452]                          ENDIF
+     453/    38F2 :                     AS1:
+     454/    38F2 : 3C 50                         CPI       'P'                 ; PUNCH ?
+     455/    38F4 : 48 00 39                      JNZ       AS2                 ; TEST FOR LIST
+     456/    38F7 : (MACRO)                        MODIO     OPT,PMSK            ; MODIFY PUNCH DEVICE
+     456/    38F7 : 1E 3F 26 64                   LXI       D,OPT             ; ADDRESS OF PHYSICAL UNIT OPT
+     456/    38FB : 16 CF                         MVI       C,PMSK              ; C = SELECT BIT PMSK
+     456/    38FD : =>FALSE                        IF        FIRST               ; EMITS THIS CODE ONCE,
+     456/    38FD :                                                             ;  BRANCH TO IT THEREAFTER
+     456/    38FD :                     IOMOD:
+     456/    38FD :                     IOMOD     LABEL     $                   ; added for AS
+     456/    38FD :                     FIRST     SET       FALSE
+     456/    38FD :                               CALL      NOISE               ; SCAN INPUT AND ECHO UNTIL
+     456/    38FD :                                                             ; PHYSICAL DEVICE CHAR IS ENCOUNTERED
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 10 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     456/    38FD :                               MVI       B,4                 ; SET OPT LENGTH
+     456/    38FD :                               MOV       H,D
+     456/    38FD :                               MOV       L,E
+     456/    38FD :                               CALL      TEST                ; COMPARE PHYSICAL DEVICE AGAINST
+     456/    38FD :                               CALL      INCHL
+     456/    38FD :                               MOV       E,M                 ; OPT, RETURN HL -> BIT PATTERN
+     456/    38FD :                     SCANOUT:
+     456/    38FD :                               CALL      TI
+     456/    38FD :                               CPI       CR
+     456/    38FD :                               JNZ       SCANOUT             ; SCAN PAST CR
+     456/    38FD :                               LXI       H,IOBYT             ; GET I/O STATUS
+     456/    38FD :                               MOV       A,M
+     456/    38FD :                               ANA       C                   ; CLEAR FIELD
+     456/    38FD :                               ORA       E                   ; SET NEW STATUS
+     456/    38FD :                               MOV       M,A                 ; RETURN TO MEMORY
+     456/    38FD :                               JMP       START
+     456/    38FD :                     TEST:                                   ; INDEX THROUGH PHYSICAL UNIT OPT
+     456/    38FD :                               CMP       M                   ; COMPARE DEVICE CHAR WITH LEGAL VALUES
+     456/    38FD :                               RZ                            ; RETURN WITH HL -> DEVICE SELECT BITS
+     456/    38FD :                               CALL      INCHL
+     456/    38FD :                               CALL      INCHL
+     456/    38FD :                               DCR       B
+     456/    38FD :                               JNZ       TEST                ; CONTINUE LOOKUP
+     456/    38FD :                               JMP       LER                 ; ERROR RETURN
+     456/    38FD : [456]                          ENDIF
+     456/    38FD : =>TRUE                         IF        ~FIRST
+     456/    38FD : 44 B1 38                      JMP       IOMOD
+     456/    3900 : [456]                          ENDIF
+     457/    3900 :                     AS2:
+     458/    3900 : 3C 4C                         CPI       'L'                 ; LIST ?
+     459/    3902 : 48 48 3C                      JNZ       LER                 ; ERROR
+     460/    3905 : (MACRO)                        MODIO     OLT,LMSK            ; MODIFY LIST DEVICE
+     460/    3905 : 1E 3F 26 6C                   LXI       D,OLT             ; ADDRESS OF PHYSICAL UNIT OLT
+     460/    3909 : 16 3F                         MVI       C,LMSK              ; C = SELECT BIT LMSK
+     460/    390B : =>FALSE                        IF        FIRST               ; EMITS THIS CODE ONCE,
+     460/    390B :                                                             ;  BRANCH TO IT THEREAFTER
+     460/    390B :                     IOMOD:
+     460/    390B :                     IOMOD     LABEL     $                   ; added for AS
+     460/    390B :                     FIRST     SET       FALSE
+     460/    390B :                               CALL      NOISE               ; SCAN INPUT AND ECHO UNTIL
+     460/    390B :                                                             ; PHYSICAL DEVICE CHAR IS ENCOUNTERED
+     460/    390B :                               MVI       B,4                 ; SET OLT LENGTH
+     460/    390B :                               MOV       H,D
+     460/    390B :                               MOV       L,E
+     460/    390B :                               CALL      TEST                ; COMPARE PHYSICAL DEVICE AGAINST
+     460/    390B :                               CALL      INCHL
+     460/    390B :                               MOV       E,M                 ; OLT, RETURN HL -> BIT PATTERN
+     460/    390B :                     SCANOUT:
+     460/    390B :                               CALL      TI
+     460/    390B :                               CPI       CR
+     460/    390B :                               JNZ       SCANOUT             ; SCAN PAST CR
+     460/    390B :                               LXI       H,IOBYT             ; GET I/O STATUS
+     460/    390B :                               MOV       A,M
+     460/    390B :                               ANA       C                   ; CLEAR FIELD
+     460/    390B :                               ORA       E                   ; SET NEW STATUS
+     460/    390B :                               MOV       M,A                 ; RETURN TO MEMORY
+     460/    390B :                               JMP       START
+     460/    390B :                     TEST:                                   ; INDEX THROUGH PHYSICAL UNIT OLT
+     460/    390B :                               CMP       M                   ; COMPARE DEVICE CHAR WITH LEGAL VALUES
+     460/    390B :                               RZ                            ; RETURN WITH HL -> DEVICE SELECT BITS
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 11 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     460/    390B :                               CALL      INCHL
+     460/    390B :                               CALL      INCHL
+     460/    390B :                               DCR       B
+     460/    390B :                               JNZ       TEST                ; CONTINUE LOOKUP
+     460/    390B :                               JMP       LER                 ; ERROR RETURN
+     460/    390B : [460]                          ENDIF
+     460/    390B : =>TRUE                         IF        ~FIRST
+     460/    390B : 44 B1 38                      JMP       IOMOD
+     460/    390E : [460]                          ENDIF
+     461/    390E :                     ;
+     462/    390E :                     ; PUNCH A BNPF TAPE
+     463/    390E :                     ;
+     464/    390E :                     ; THIS ROUTINE EXPECTS TWO HEXADECIMAL PARAMETERS TO BE
+     465/    390E :                     ; ENTERED FROM THE KEYBOARD AND INTERPRETS THEM AS 
+     466/    390E :                     ; THE BOUNDS OF MEMORY AREA TO BE PUNCHED ON THE
+     467/    390E :                     ; ASIGNED PUNCH DEVICE IN BNPF FORMAT. THE TAPE 
+     468/    390E :                     ; PRODUCED IS FORMATTED WITH 4 BNPF 8-BIT WORDS PER
+     469/    390E :                     ; LINE, WITH A REFERENCE ADDRESS IN DECIMAL PRECEEDING
+     470/    390E :                     ; EACH LINE.
+     471/    390E :                     ;
+     472/    390E :                     BNPF:
+     473/    390E : 46 85 3D                      CALL      EXPR                ; GET TWO ADDRESSES
+     474/    3911 : 46 CC 3C                      CALL      CRLF
+     475/    3914 : 46 20 3E                      CALL      LEAD
+     476/    3917 :                     BN0:
+     477/    3917 : 46 95 3E                      CALL      PEOL                ; PUNCH CR,LF
+     478/    391A : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     479/    391D : 16 20                         MVI       C,' '               ; ZERO SUPPRESSION CHARACTER
+     480/    391F : 1E 27 26 10                   LXI       D,10000             ; PUNCH ADDRESS IN DECIMAL
+     481/    3923 : 46 2C 3D                      CALL      DIGIT
+     482/    3926 : 1E 03 26 E8                   LXI       D,1000
+     483/    392A : 46 2C 3D                      CALL      DIGIT
+     484/    392D : 1E 00 26 64                   LXI       D,100
+     485/    3931 : 46 2C 3D                      CALL      DIGIT
+     486/    3934 : 1E 00 26 0A                   LXI       D,10
+     487/    3938 : 46 2C 3D                      CALL      DIGIT
+     488/    393B : 1E 00 26 01                   LXI       D,1
+     489/    393F : 16 30                         MVI       C,'0'               ; FORCE AT LEAST 1 ZERO
+     490/    3941 : 46 2C 3D                      CALL      DIGIT
+     491/    3944 : 0E 20                         MVI       B,' '
+     492/    3946 : 46 B5 3E                      CALL      PO
+     493/    3949 : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     494/    394C :                     BN1:
+     495/    394C : 46 55 3D                      CALL      ENCODE              ; ENCODE A MEMORY BYTE INTO BNPF
+     496/    394F : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     497/    3952 : 46 E2 3D                      CALL      HILO
+     498/    3955 : 60 8E 3A                      JC        NULL                ; ALL DONE, PUNCH TRAILER AND RETURN
+     499/    3958 : 46 34 3F                      CALL      SAVIT
+     500/    395B : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     501/    395E : C6                            MOV       A,L
+     502/    395F : 24 03                         ANI       03H                 ; PUNCH CR,LF,ADDRESS ON MULTIPLE OF 4
+     503/    3961 : 48 4C 39                      JNZ       BN1
+     504/    3964 : 44 17 39                      JMP       BN0
+     505/    3967 :                     ;
+     506/    3967 :                     ; COMPARE PROM WITH MEMORY
+     507/    3967 :                     ;
+     508/    3967 :                     ; THIS ROUTINE EXPECTS ONE HEXADECIMAL PARAMETER WHICH 
+     509/    3967 :                     ; IT INTERPRETS AS A MEMORY ADDRESS. THE ROUTINE
+     510/    3967 :                     ; COMPARES THE PROM IN THE FRONT PANEL SOCKET WITH A
+     511/    3967 :                     ; 256 BYTE AREA OF MEMORY POINTED TO BY THE INPUT PARAMETER.
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 12 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     512/    3967 :                     ; ALL DIFFERENCES BETWEEN THE PROM AND THE MEMORY AREA 
+     513/    3967 :                     ; ARE DISPLAYED IN THE FOLLOWING FORMAT:
+     514/    3967 :                     ;
+     515/    3967 :                     ; <MEM ADDRESS> <MEM CONTENTS> <CORRESPONDING PROM CONTENTS>
+     516/    3967 :                     ;
+     517/    3967 :                     COMP:
+     518/    3967 : 11                            DCR       C
+     519/    3968 : 46 85 3D                      CALL      EXPR                ; GET ONE ADDRESS
+     520/    396B : 46 CC 3C                      CALL      CRLF                ; OUTPUT CR AND LF
+     521/    396E : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     522/    3971 : 16 00                         MVI       C,0                 ; COUNT/PROM ADDRESS
+     523/    3973 : 06 00                         MVI       A,ENB               ; ENABLE PROM PROGRAMMER
+     524/    3975 : 53                            OUT       PROMC
+     525/    3976 :                     CM0:
+     526/    3976 : C2                            MOV       A,C                 ; SET PROM ADDRESS
+     527/    3977 : 2C FF                         XRI       0FFH                ; INVERT ADDRESS
+     528/    3979 : 55                            OUT       PAD
+     529/    397A : 46 25 3D                      CALL      DELAY               ; WAIT FOR 6-76 BOARD TO LATCH DATA
+     530/    397D : 45                            IN        PDI                 ; GET PROM DATA
+     531/    397E : 2C FF                         XRI       0FFH
+     532/    3980 : BF                            CMP       M                   ; COMPARE WITH MEMORY
+     533/    3981 : 68 A2 39                      JZ        CM1                 ; COMPARE
+     534/    3984 : E2                            MOV       E,C
+     535/    3985 : 46 34 3F                      CALL      SAVIT
+     536/    3988 : 46 D4 3D                      CALL      GETAD
+     537/    398B : 46 00 3E                      CALL      LADR                ; PRINT MEMORY ADDRESS
+     538/    398E : C7                            MOV       A,M
+     539/    398F : 46 10 3E                      CALL      LBYTE               ; PRINT RAM DATA
+     540/    3992 : 46 50 3C                      CALL      BLK
+     541/    3995 : 45                            IN        PDI                 ; GET PROM DATA
+     542/    3996 : 2C FF                         XRI       0FFH
+     543/    3998 : 46 10 3E                      CALL      LBYTE               ; PRINT PROM DATA
+     544/    399B : 46 CC 3C                      CALL      CRLF
+     545/    399E : 46 D4 3D                      CALL      GETAD
+     546/    39A1 : D4                            MOV       C,E
+     547/    39A2 :                     CM1:
+     548/    39A2 : 46 F0 3D                      CALL      INCHL
+     549/    39A5 : 10                            INR       C                   ; ADJUST PROM ADDRESS
+     550/    39A6 : 48 76 39                      JNZ       CM0
+     551/    39A9 : 44 44 38                      JMP       START
+     552/    39AC :                     ;
+     553/    39AC :                     ; DISPLAY MEMORY IN HEX TO CONSOLE DEVICE
+     554/    39AC :                     ;
+     555/    39AC :                     ; THIS ROUTINE EXPECTS TWO HEXADECIMAL PARAMETERS SPECIFYING
+     556/    39AC :                     ; THE BOUNDS OF A MEMORY AREA TO BE DISPLAYED ON THE
+     557/    39AC :                     ; CONSOLE DEVICE. THE MEMORY AREA IS DISPLAYED 16 BYTES
+     558/    39AC :                     ; PER LINE, WITH THE MEMORY ADDRESS OF THE FIRST BYTE 
+     559/    39AC :                     ; PRINTED FOR REFERENCE. ALL LINES ARE BLOCKED INTO INTEGRAL
+     560/    39AC :                     ; MULTIPLES OF 16 FOR CLARITY, SO THAT THE FIRST AND LAST
+     561/    39AC :                     ; LINES MAY BE LESS THAN 16 BYTES IN ORDER TO SYNCHRONIZE THE
+     562/    39AC :                     ; DISPLAY.
+     563/    39AC :                     ;
+     564/    39AC :                     DISP:
+     565/    39AC : 46 85 3D                      CALL      EXPR                ; GET TWO ADDRESSES
+     566/    39AF :                     DI0:
+     567/    39AF : 46 CC 3C                      CALL      CRLF
+     568/    39B2 : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     569/    39B5 : 46 00 3E                      CALL      LADR                ; PRINT MEMORY ADDRESS
+     570/    39B8 :                     DI1:
+     571/    39B8 : C7                            MOV       A,M
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 13 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     572/    39B9 : 46 10 3E                      CALL      LBYTE               ; PRINT DATA
+     573/    39BC : 46 50 3C                      CALL      BLK                 ; PRINT SPACE
+     574/    39BF : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     575/    39C2 : 46 E2 3D                      CALL      HILO                ; TEST FOR COMPLETION
+     576/    39C5 : 60 44 38                      JC        START
+     577/    39C8 : 46 34 3F                      CALL      SAVIT               ; STORE HL,DE
+     578/    39CB : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     579/    39CE : C6                            MOV       A,L
+     580/    39CF : 24 0F                         ANI       0FH                 ; PRINT CR,LF,ADDRESS ON MULTIPLE OF 16
+     581/    39D1 : 48 B8 39                      JNZ       DI1
+     582/    39D4 : 44 AF 39                      JMP       DI0
+     583/    39D7 :                     ;
+     584/    39D7 :                     ; END OF FILE COMMAND
+     585/    39D7 :                     ;
+     586/    39D7 :                     ; THIS ROUTINE PRODUCES A TERMINATION RECORD WHICH PROPERLY
+     587/    39D7 :                     ; COMPLETES A HEXADECIMAL FILE CREATED BY 'W' COMMANDS. IT
+     588/    39D7 :                     ; EXPECTS ONE HEXADECIMAL PARAMETER WHICH IS ENCODED IN THE
+     589/    39D7 :                     ; TERMINATION RECORD IN THE LOAD ADDRESS FIELD AND SPECIFIES
+     590/    39D7 :                     ; THE ENTRY POINT OF THE FILE CREATED. A SUBSEQUENT 'R' COMMAND
+     591/    39D7 :                     ; WILL LOAD THE FILE CREATED AND TRANSFER CONTROL TO THE 
+     592/    39D7 :                     ; ENTRY POINT SPECIFIED IF IT IS NON-ZERO.
+     593/    39D7 :                     ;
+     594/    39D7 :                     EOF:
+     595/    39D7 : 11                            DCR       C                   ; GET ONE PARAMETER
+     596/    39D8 : 46 85 3D                      CALL      EXPR
+     597/    39DB : 46 95 3E                      CALL      PEOL                ; PUNCH CR,LF
+     598/    39DE : 0E 3A                         MVI       B,':'
+     599/    39E0 : 46 B5 3E                      CALL      PO
+     600/    39E3 : A8                            XRA       A                   ; CLEAR CHECKSUM
+     601/    39E4 : D8                            MOV       D,A
+     602/    39E5 : 46 7B 3E                      CALL      PBYTE               ; OUTPUT RECORD LENGTH
+     603/    39E8 : C3                            MOV       A,D
+     604/    39E9 : 46 D4 3D                      CALL      GETAD
+     605/    39EC : D8                            MOV       D,A
+     606/    39ED : E6                            MOV       E,L
+     607/    39EE : C5                            MOV       A,H
+     608/    39EF : 46 7B 3E                      CALL      PBYTE
+     609/    39F2 : C4                            MOV       A,E
+     610/    39F3 : 46 7B 3E                      CALL      PBYTE
+     611/    39F6 : 06 01                         MVI       A,1                 ; RECORD TYPE 1
+     612/    39F8 : 46 7B 3E                      CALL      PBYTE
+     613/    39FB : A8                            XRA       A
+     614/    39FC : 93                            SUB       D
+     615/    39FD : 46 7B 3E                      CALL      PBYTE               ; OUTPUT CHECKSUM
+     616/    3A00 : 44 8E 3A                      JMP       NULL                ; PUNCH TRAILER AND RETURN
+     617/    3A03 :                     ;
+     618/    3A03 :                     ; FILL RAM MEMORY BLOCK WITH CONSTANT
+     619/    3A03 :                     ;
+     620/    3A03 :                     ; THIS ROUTINE EXPECTS THREE HEXADECIMAL PARAMETERS, THE
+     621/    3A03 :                     ; FIRST AND SECOND (16 BITS) ARE INTERPRETED AS THE BOUNDS
+     622/    3A03 :                     ; OF A MEMORY AREA TO BE INITIALIZED TO A CONSTANT VALUE,
+     623/    3A03 :                     ; THE THIRD PARAMETER (B BITS) IS THAT VALUE.
+     624/    3A03 :                     ;
+     625/    3A03 :                     FILL:
+     626/    3A03 : 10                            INR       C                   ; GET 3 PARAMETERS
+     627/    3A04 : 46 85 3D                      CALL      EXPR                
+     628/    3A07 : C4                            MOV       A,E                 ; GET DATA IN A
+     629/    3A08 : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     630/    3A0B : C8                            MOV       B,A
+     631/    3A0C :                     FI0:
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 14 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     632/    3A0C : F9                            MOV       M,B                 ; STORE CONSTANT IN MEMORY
+     633/    3A0D : 46 E2 3D                      CALL      HILO                ; TEST FOR COMPLETION
+     634/    3A10 : 40 0C 3A                      JNC       FI0                 ; CONTINUE LOOPING
+     635/    3A13 : 44 44 38                      JMP       START
+     636/    3A16 :                     ;
+     637/    3A16 :                     ; GO TO <ADDRESS>
+     638/    3A16 :                     ;
+     639/    3A16 :                     ; THE G COMMAND IS USED FOR TRANSFERRING CONTROL FROM THE
+     640/    3A16 :                     ; MONITOR TO A USER PROGRAM.
+     641/    3A16 :                     ;
+     642/    3A16 :                     GOTO:
+     643/    3A16 : 11                            DCR       C
+     644/    3A17 : 46 85 3D                      CALL      EXPR
+     645/    3A1A : 44 66 38                      JMP       GO
+     646/    3A1D :                     ;
+     647/    3A1D :                     ; COMPUTE HEXADECIMAL SUM AND DIFFERENCE
+     648/    3A1D :                     ;
+     649/    3A1D :                     ; THIS ROUTINE EXPECTS TWO HEXADECIMAL PARAMETERS.
+     650/    3A1D :                     ; IT COMPUTES THE SUM AND THE DIFFERENCE OF THE TWO VALUES
+     651/    3A1D :                     ; AND DISPLAYS THEM ON THE CONSOLE DEVICE AS FOLLOWS:
+     652/    3A1D :                     ;
+     653/    3A1D :                     ; <P1+P2> <P1-P2>
+     654/    3A1D :                     ;
+     655/    3A1D :                     HEXN:
+     656/    3A1D : 46 85 3D                      CALL      EXPR                ; GET TWO NUMBERS
+     657/    3A20 : 46 CC 3C                      CALL      CRLF
+     658/    3A23 : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     659/    3A26 : C6                            MOV       A,L                 ; COMPUTE HL+DE
+     660/    3A27 : 84                            ADD       E
+     661/    3A28 : E0                            MOV       E,A                 ; SAVE LSB IN E
+     662/    3A29 : C5                            MOV       A,H
+     663/    3A2A : 8B                            ADC       D
+     664/    3A2B : 46 10 3E                      CALL      LBYTE               ; DISPLAY MSB OF SUM
+     665/    3A2E : C4                            MOV       A,E                 ; RETRIEVE LSB
+     666/    3A2F : 46 10 3E                      CALL      LBYTE               ; DISPLAY IT
+     667/    3A32 : 46 50 3C                      CALL      BLK                 ; TYPE A SPACE
+     668/    3A35 : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     669/    3A38 : C6                            MOV       A,L                 ; COMPUTE HL-DE
+     670/    3A39 : 94                            SUB       E
+     671/    3A3A : E0                            MOV       E,A                 ; SAVE LSB OF DIFFERENCE
+     672/    3A3B : C5                            MOV       A,H
+     673/    3A3C : 9B                            SBB       D
+     674/    3A3D : E8                            MOV       H,A
+     675/    3A3E : 46 10 3E                      CALL      LBYTE               ; DISPLAY MSB OF DIFFERENCE
+     676/    3A41 : C4                            MOV       A,E                 ; RETRIEVE LSB
+     677/    3A42 : 46 10 3E                      CALL      LBYTE               ; DISPLAY LSB OF DIFFERENCE
+     678/    3A45 : 44 44 38                      JMP       START
+     679/    3A48 :                     ;
+     680/    3A48 :                     ; LOAD A BNPF TAPE INTO RAM MEMORY.
+     681/    3A48 :                     ; 
+     682/    3A48 :                     ; THIS ROUTINE EXPECTS TWO HEXADECIMAL PARAMETERS AND
+     683/    3A48 :                     ; INTERPRETS THEM AS BOUNDS OF A MEMORY AREA TO BE 
+     684/    3A48 :                     ; LOADED BY BNPF DATA TO BE READ FROM THE READER.
+     685/    3A48 :                     ; IT IS ASSUMED THAT ENOUGH DATA IS AVAILABLE IN THE
+     686/    3A48 :                     ; TAPE TO BE READ TO SATISFY THE MEMORY BOUNDS ENTERED.
+     687/    3A48 :                     ; IF END OF TAPE IS ENCOUNTERED BEFORE THE MEMORY BOUNDS
+     688/    3A48 :                     ; ARE SATISFIED, THIS ROUTINE WILL TERMINATE ON AN ERROR
+     689/    3A48 :                     ; CONDITION (SEE RIX), BUT ALL DATA READ BEFORE THE END 
+     690/    3A48 :                     ; OF TAPE WAS ENCOUNTERED WILL BE LOADED.
+     691/    3A48 :                     ;
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 15 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     692/    3A48 :                     LOAD:
+     693/    3A48 : 46 85 3D                      CALL      EXPR                ; GET TWO ADDRESSES
+     694/    3A4B : 46 CC 3C                      CALL      CRLF
+     695/    3A4E :                     LO0:
+     696/    3A4E : 46 FC 3C                      CALL      DECODE              ; CONVERT BNPF, RETURN IN C-REGISTER
+     697/    3A51 : C2                            MOV       A,C                 ; CONVERTED DATA BYTE
+     698/    3A52 : 46 D4 3D                      CALL      GETAD               ; GET HL AND DE
+     699/    3A55 : F8                            MOV       M,A                 ; STORE DATA
+     700/    3A56 : 46 E2 3D                      CALL      HILO                ; TEST FOR COMPLETION
+     701/    3A59 : 60 44 38                      JC        START
+     702/    3A5C : 46 34 3F                      CALL      SAVIT
+     703/    3A5F : 44 4E 3A                      JMP       LO0
+     704/    3A62 :                     ;
+     705/    3A62 :                     ; MOVE A BLOCK OF RAM MEMORY
+     706/    3A62 :                     ;
+     707/    3A62 :                     MOVE:
+     708/    3A62 : 10                            INR       C                   ; GET THREE ADDRESSES
+     709/    3A63 : 46 85 3D                      CALL      EXPR
+     710/    3A66 :                     MV0:
+     711/    3A66 : 46 D4 3D                      CALL      GETAD
+     712/    3A69 : C7                            MOV       A,M                 ; GET DATA
+     713/    3A6A : 2E 00 36 0C                   LXI       H,ADR3              ; GET DESTINATION ADDRESS
+     714/    3A6E : CF                            MOV       B,M
+     715/    3A6F : 30                            INR       L
+     716/    3A70 : F7                            MOV       L,M
+     717/    3A71 : E9                            MOV       H,B
+     718/    3A72 : F8                            MOV       M,A                 ; STORE DATA
+     719/    3A73 : 46 F0 3D                      CALL      INCHL               ; INCREMENT DESTINATION ADDRESS
+     720/    3A76 : CD                            MOV       B,H
+     721/    3A77 : D6                            MOV       C,L
+     722/    3A78 : 2E 00 36 0C                   LXI       H,ADR3
+     723/    3A7C : F9                            MOV       M,B
+     724/    3A7D : 30                            INR       L
+     725/    3A7E : FA                            MOV       M,C
+     726/    3A7F : 46 D4 3D                      CALL      GETAD
+     727/    3A82 : 46 E2 3D                      CALL      HILO
+     728/    3A85 : 60 44 38                      JC        START
+     729/    3A88 : 46 34 3F                      CALL      SAVIT
+     730/    3A8B : 44 66 3A                      JMP       MV0
+     731/    3A8E :                     ;
+     732/    3A8E :                     ; PUNCH LEADER AND TRAILER
+     733/    3A8E :                     ;
+     734/    3A8E :                     ; THIS ROUTINE PUNCHES 60 NULL CHARACTERS ON THE DEVICE ASSIGNED
+     735/    3A8E :                     ; AS THE PUNCH. IT IS BRANCHED TO BY THE 'B' AND 'E' COMMANDS
+     736/    3A8E :                     ; AS WELL AS BEING INVOKED BY THE 'N' COMMAND.
+     737/    3A8E :                     ;
+     738/    3A8E :                     NULL:
+     739/    3A8E : 46 20 3E                      CALL      LEAD
+     740/    3A91 : 44 44 38                      JMP       START
+     741/    3A94 :                     ;
+     742/    3A94 :                     ; PROGRAM A 1702A PROM WITH FAST ALGORITHM
+     743/    3A94 :                     ; (20.48 TO 409.6 SECONDS)
+     744/    3A94 :                     ;
+     745/    3A94 :                     ; THIS ROUTINE EXPECTS THREE HEXADECIMAL PARAMETERS FROM THE CONSOLE.
+     746/    3A94 :                     ; THE FIRST AND SECOND ARE THE BOUNDS OF A MEMORY AREA TO BE
+     747/    3A94 :                     ; REPRODUCED IN THE 1702A PROM IN THE FRONT PANEL SOCKET. THE THIRD
+     748/    3A94 :                     ; PARAMETER IS THE ADDRESS IN THE PROM (8 BITS) WHERE THE DUPLICATION
+     749/    3A94 :                     ; IS TO COMMENCE. THE ALGORITHM USED IN THIS ROUTINE TAKES ADVANTAGE
+     750/    3A94 :                     ; OF THE FACT THAT MOST PROMS MAY BE PROGRAMMED IN A SMALL FRACTION
+     751/    3A94 :                     ; OF THE TIME IT WOULD TAKE UNDER WORST CASE CONDITIONS, THEREFORE
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 16 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     752/    3A94 :                     ; GREATLY REDUCING PROGRAMMING TIME FOR MOST PROMS. THE WIDE VARIATION
+     753/    3A94 :                     ; IN TIMES QUATED IS DUE TO THE ALLOWABLE RANGE BETWEEN BEST AND WORST
+     754/    3A94 :                     ; CASE PROGRAMMING TIMES.
+     755/    3A94 :                     ;
+     756/    3A94 :                     PROG:
+     757/    3A94 : 10                            INR       C
+     758/    3A95 : 46 85 3D                      CALL      EXPR                ; HL = TOP AFTER RETURN
+     759/    3A98 : 31                            DCR       L
+     760/    3A99 : D7                            MOV       C,M                 ; PROM ADDRESS
+     761/    3A9A : 31                            DCR       L
+     762/    3A9B : 31                            DCR       L                   ; HL = TOP - 3
+     763/    3A9C : E7                            MOV       E,M                 ; LSB OF HIGH ADDRESS
+     764/    3A9D : 31                            DCR       L
+     765/    3A9E : DF                            MOV       D,M                 ; MSB OF HIGH ADDRESS
+     766/    3A9F : 31                            DCR       L
+     767/    3AA0 : CF                            MOV       B,M                 ; LSB OF LOW ADDRESS
+     768/    3AA1 : 31                            DCR       L
+     769/    3AA2 : EF                            MOV       H,M                 ; MSB OF LOW ADDRESS
+     770/    3AA3 : F1                            MOV       L,B
+     771/    3AA4 : C4                            MOV       A,E
+     772/    3AA5 : 96                            SUB       L
+     773/    3AA6 : E0                            MOV       E,A                 ; COUNT
+     774/    3AA7 : 20                            INR       E                   ; ADJUST SO 256 = 0
+     775/    3AA8 : C3                            MOV       A,D
+     776/    3AA9 : 9D                            SBB       H
+     777/    3AAA : 60 48 3C                      JC        LER                 ; CARRY = ERROR
+     778/    3AAD :                     PR0:
+     779/    3AAD : 06 00                         MVI       A,ENB
+     780/    3AAF : 53                            OUT       PROMC               ; ENABLE PROM PROGRAMMER
+     781/    3AB0 : C2                            MOV       A,C
+     782/    3AB1 : 2C FF                         XRI       0FFH
+     783/    3AB3 : 55                            OUT       PAD                 ; PROM ADDRESS
+     784/    3AB4 : 45                            IN        PDI                 ; READ VALUE
+     785/    3AB5 : 2C FF                         XRI       0FFH
+     786/    3AB7 : BF                            CMP       M                   ; COMPARE WITH DESIRED
+     787/    3AB8 : 68 EA 3A                      JZ        PR4                 ; DON'T HAVE TO PROGRAM THE LOCATION
+     788/    3ABB : 1E F0                         MVI       D,-16               ; SET MAX TRIES = 16
+     789/    3ABD :                     PR1:
+     790/    3ABD : 46 9F 3E                      CALL      PGRM                ; PULSE AND DELAY 20 MS
+     791/    3AC0 : 45                            IN        PDI                 ; READ VALUE
+     792/    3AC1 : 2C FF                         XRI       0FFH                
+     793/    3AC3 : BF                            CMP       M                   ; COMPARE WITH DESIRED
+     794/    3AC4 : 68 DD 3A                      JZ        PR2                 ; GOT IT, NOW PULSE 3*N MORE TIMES
+     795/    3AC7 : 18                            INR       D                   ; INCREMENT COUNTER
+     796/    3AC8 : 48 BD 3A                      JNZ       PR1                 ; KEEP GOING
+     797/    3ACB : 46 CC 3C                      CALL      CRLF
+     798/    3ACE : 0E 24                         MVI       B,'$'               ; ERROR OUT
+     799/    3AD0 : 46 52 3C                      CALL      CO
+     800/    3AD3 : 46 50 3C                      CALL      BLK                 ; OUTPUT A SPACE
+     801/    3AD6 : C2                            MOV       A,C                 ; DISPLAY PROM ADDRESS
+     802/    3AD7 : 46 10 3E                      CALL      LBYTE
+     803/    3ADA : 44 48 3C                      JMP       LER                 ; BAD PROM, ABORT
+     804/    3ADD :                     PR2:
+     805/    3ADD : C3                            MOV       A,D                 ; MOVE COUNT RESIDUE TO A
+     806/    3ADE : 04 11                         ADI       17                  ; ACTUAL COUNT OF TRIES REQUIRED
+     807/    3AE0 : 80                            ADD       A                   ; COUNT = COUNT * 2
+     808/    3AE1 : 80                            ADD       A                   ; COUNT = COUNT * 4
+     809/    3AE2 : D8                            MOV       D,A
+     810/    3AE3 :                     PR3:                                    ; OVERPROGRAM 4*N TIMES
+     811/    3AE3 : 46 9F 3E                      CALL      PGRM
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 17 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     812/    3AE6 : 19                            DCR       D
+     813/    3AE7 : 48 E3 3A                      JNZ       PR3
+     814/    3AEA :                     PR4:
+     815/    3AEA : 10                            INR       C                   ; BUMP PROM ADDRESS
+     816/    3AEB : 68 44 38                      JZ        START               ; PROM ADDRESS ROLLOVER, TERMINATE
+     817/    3AEE : 46 F0 3D                      CALL      INCHL               ; BUMP MEMORY ADDRESS
+     818/    3AF1 : 21                            DCR       E                   ; DECREMENT COUNT
+     819/    3AF2 : 48 AD 3A                      JNZ       PR0                 ; CONTINUE WITH PROGRAMMING
+     820/    3AF5 : 44 44 38                      JMP       START
+     821/    3AF8 :                     ;
+     822/    3AF8 :                     ; READ ROUTINE.
+     823/    3AF8 :                     ;
+     824/    3AF8 :                     ; THIS ROUTINE READS A HEXADECIMAL FILE FROM THE ASSIGNED
+     825/    3AF8 :                     ; READER DEVICE AND LOADS IT INTO MEMORY. ONE HEXADECIMAL 
+     826/    3AF8 :                     ; PARAMETER IS EXPECTED. THIS PARAMETER IS A BIAS ADDRESS
+     827/    3AF8 :                     ; TO BE ADDED TO THE MEMORY ADDRESS OF EACH DATA BYTE ENCOUNTERED.
+     828/    3AF8 :                     ; IN THIS WAY, HEXADECIMAL FILES MAY BE LOADED INTO MEMORY 
+     829/    3AF8 :                     ; IN AREAS OTHER THAN THOSE FOR WHICH THEY WERE ASSEMBLED OR COMPILED.
+     830/    3AF8 :                     ; ALL RECORDS READ ARE CHECKSUMMED AND COMPARED AGAINST THE 
+     831/    3AF8 :                     ; CHECKSUM IN THE RECORD. IF A CHECKSUM ERROR (OR TAPE READ ERROR)
+     832/    3AF8 :                     ; OCCURS, THE ROUTINE TAKES AN ERROR EXIT. NORMAL LOADING IS 
+     833/    3AF8 :                     ; TERMINATED WHEN A RECORD OF LENGTH 0 IS ENCOUNTERED. THIS IS
+     834/    3AF8 :                     ; INTERPRETED AS AN END OF FILE RECORD AND THE LOAD ADDRESS
+     835/    3AF8 :                     ; FIELD OF THAT RECORD IS TAKEN TO BE THE ENTRY POINT OF THE 
+     836/    3AF8 :                     ; PROGRAM (IF IT IS NON-ZERO).
+     837/    3AF8 :                     ; 
+     838/    3AF8 :                     READ:
+     839/    3AF8 : 11                            DCR       C                   ; GET ONE ADDRESS
+     840/    3AF9 : 46 85 3D                      CALL      EXPR
+     841/    3AFC :                     RED0:
+     842/    3AFC : 46 2B 3F                      CALL      RIX
+     843/    3AFF : 0E 3A                         MVI       B,':'
+     844/    3B01 : 91                            SUB       B
+     845/    3B02 : 48 FC 3A                      JNZ       RED0                ; SCAN TO RECORD MARK
+     846/    3B05 : D8                            MOV       D,A                 ; CLEAR CHECKSUM
+     847/    3B06 : 46 7F 3C                      CALL      BYTE
+     848/    3B09 : 68 5A 3B                      JZ        RED2                ; ZERO RECORD LENGTH, ALL DONE
+     849/    3B0C : E0                            MOV       E,A                 ; E <- RECORD LENGTH
+     850/    3B0D : 46 7F 3C                      CALL      BYTE                ; GET MSB OF LOAD ADDRESS
+     851/    3B10 : 2E 00 36 0A                   LXI       H,ADR2
+     852/    3B14 : F8                            MOV       M,A                 ; SAVE IT
+     853/    3B15 : 46 7F 3C                      CALL      BYTE                ; GET LSB OF LOAD ADDRESS
+     854/    3B18 : 2E 00 36 0B                   LXI       H,ADR2+1
+     855/    3B1C : F8                            MOV       M,A
+     856/    3B1D : 46 7F 3C                      CALL      BYTE                ; RECORD TYPE
+     857/    3B20 : 2E 00 36 0B                   LXI       H,ADR2+1
+     858/    3B24 : C7                            MOV       A,M
+     859/    3B25 : 36 09                         MVI       L,(ADR1+1) & 0FFH
+     860/    3B27 : 87                            ADD       M
+     861/    3B28 : D0                            MOV       C,A
+     862/    3B29 : 31                            DCR       L
+     863/    3B2A : C7                            MOV       A,M
+     864/    3B2B : 36 0A                         MVI       L,ADR2 & 0FFH
+     865/    3B2D : 8F                            ADC       M
+     866/    3B2E : 2E 00 36 04                   LXI       H,HPRIME
+     867/    3B32 : F8                            MOV       M,A
+     868/    3B33 : 30                            INR       L
+     869/    3B34 : FA                            MOV       M,C
+     870/    3B35 :                     RED1:
+     871/    3B35 : 46 7F 3C                      CALL      BYTE                ; READ DATA
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 18 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     872/    3B38 : 2E 00 36 04                   LXI       H,HPRIME
+     873/    3B3C : D7                            MOV       C,M
+     874/    3B3D : 30                            INR       L
+     875/    3B3E : F7                            MOV       L,M
+     876/    3B3F : EA                            MOV       H,C
+     877/    3B40 : F8                            MOV       M,A                 ; PUT IN MEMORY
+     878/    3B41 : 46 F0 3D                      CALL      INCHL
+     879/    3B44 : CD                            MOV       B,H
+     880/    3B45 : D6                            MOV       C,L
+     881/    3B46 : 2E 00 36 04                   LXI       H,HPRIME
+     882/    3B4A : F9                            MOV       M,B
+     883/    3B4B : 30                            INR       L
+     884/    3B4C : FA                            MOV       M,C
+     885/    3B4D : 21                            DCR       E
+     886/    3B4E : 48 35 3B                      JNZ       RED1                ; LOOP UNTIL DONE
+     887/    3B51 : 46 7F 3C                      CALL      BYTE                ; READ CHECKSUM
+     888/    3B54 : 48 48 3C                      JNZ       LER                 ; CHECKSUM ERROR
+     889/    3B57 : 44 FC 3A                      JMP       RED0                ; GET ANOTHER RECORD
+     890/    3B5A :                     RED2:
+     891/    3B5A : 46 7F 3C                      CALL      BYTE                ; GET MSB OF TRANSFER ADDRESS
+     892/    3B5D : E0                            MOV       E,A
+     893/    3B5E : 46 7F 3C                      CALL      BYTE
+     894/    3B61 : DC                            MOV       D,E
+     895/    3B62 : E0                            MOV       E,A
+     896/    3B63 : B3                            ORA       D
+     897/    3B64 : 48 66 38                      JNZ       GO                  ; TAKE THE BRANCH
+     898/    3B67 : 44 44 38                      JMP       START
+     899/    3B6A :                     ;
+     900/    3B6A :                     ; SUBSTITUTE MEMORY CONTENTS ROUTINE
+     901/    3B6A :                     ;
+     902/    3B6A :                     ; THIS ROUTINE EXPECTS ONE PARAMETER FROM THE CONSOLE, FOLLOWED 
+     903/    3B6A :                     ; BY A SPACE. THE PARAMETER IS INTERPRETED AS A MEMORY LOCATION 
+     904/    3B6A :                     ; AND THE ROUTINE WILL DISPLAY THE CONTENTS OF THAT LOCATION,
+     905/    3B6A :                     ; FOLLOWED BY A DASH (-). TO MODIFY MEMORY, TYPE IN THE NEW DATA
+     906/    3B6A :                     ; FOLLOWED BY A SPACE OR A CARRIAGE RETURN.  IF NO MODIFICATION 
+     907/    3B6A :                     ; OF THE LOCATION IS REQUIRED, TYPE ONLY A SPACE OR CARRIAGE RETURN.
+     908/    3B6A :                     ; IF A SPACE WAS LAST TYPED, THE NEXT MEMORY LOCATION WILL BE DISPLAYED
+     909/    3B6A :                     ; AND MODIFICATION OF IT IS ALLOWED. IF A CARRIAGE RETURN WAS ENTERED 
+     910/    3B6A :                     ; THE COMMAND IS TERMINATED.
+     911/    3B6A :                     ;
+     912/    3B6A :                     SUBS:
+     913/    3B6A : 11                            DCR       C
+     914/    3B6B : 46 85 3D                      CALL      EXPR                ; GET ONE ADDRESS
+     915/    3B6E : 3C 0D                         CPI       CR
+     916/    3B70 : 68 44 38                      JZ        START
+     917/    3B73 : 46 D4 3D                      CALL      GETAD
+     918/    3B76 :                     SU0:
+     919/    3B76 : C7                            MOV       A,M
+     920/    3B77 : 46 10 3E                      CALL      LBYTE               ; DISPLAY DATA
+     921/    3B7A : 0E 2D                         MVI       B,'-'
+     922/    3B7C : 46 52 3C                      CALL      CO
+     923/    3B7F : 46 49 3F                      CALL      TI
+     924/    3B82 : 3C 20                         CPI       ' '
+     925/    3B84 : 68 AA 3B                      JZ        SU1
+     926/    3B87 : 3C 2C                         CPI       ','
+     927/    3B89 : 68 AA 3B                      JZ        SU1
+     928/    3B8C : 3C 0D                         CPI       CR
+     929/    3B8E : 68 44 38                      JZ        START
+     930/    3B91 : 16 01                         MVI       C,1
+     931/    3B93 : 26 00                         MVI       E,0
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 19 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     932/    3B95 : 2E 00 36 04                   LXI       H,HPRIME
+     933/    3B99 : 3E 00                         MVI       M,ADR2 >> 8
+     934/    3B9B : 30                            INR       L
+     935/    3B9C : 3E 0A                         MVI       M,ADR2 & 0FFH
+     936/    3B9E : 46 94 3D                      CALL      EX1
+     937/    3BA1 : 46 D4 3D                      CALL      GETAD
+     938/    3BA4 : FC                            MOV       M,E
+     939/    3BA5 : 3C 0D                         CPI       CR                  ; TEST DELIMITER
+     940/    3BA7 : 68 44 38                      JZ        START               ; CR ENTERED AFTER LAST SUBSTITUTION
+     941/    3BAA :                     SU1:
+     942/    3BAA : 46 D4 3D                      CALL      GETAD
+     943/    3BAD : 46 F0 3D                      CALL      INCHL
+     944/    3BB0 : 46 34 3F                      CALL      SAVIT
+     945/    3BB3 : 46 D4 3D                      CALL      GETAD
+     946/    3BB6 : 44 76 3B                      JMP       SU0
+     947/    3BB9 :                     ;
+     948/    3BB9 :                     ; TRANSFER CONTENTS OF A PROM TO MEMORY.
+     949/    3BB9 :                     ;
+     950/    3BB9 :                     ; THIS ROUTINE EXPECTS ONE HEXADECIMAL PARAMETER WHICH 
+     951/    3BB9 :                     ; IT INTERPRETS AS THE LOCATION IN MEMORY WHERE A COPY OF THE 
+     952/    3BB9 :                     ; PROM IN THE FRONT PANEL IS TO BE STORED. THIS COPY IS ALWAYS
+     953/    3BB9 :                     ; 256 BYTES IN LENGTH.
+     954/    3BB9 :                     ;
+     955/    3BB9 :                     TRAN:
+     956/    3BB9 : 11                            DCR       C
+     957/    3BBA : 46 85 3D                      CALL      EXPR                ; GET ONE ADDRESS
+     958/    3BBD : 06 00                         MVI       A,ENB               ; ENABLE PROM PROGRAMMER
+     959/    3BBF : 53                            OUT       PROMC
+     960/    3BC0 : 46 D4 3D                      CALL      GETAD               ; HL = MEM ADR
+     961/    3BC3 : 26 00                         MVI       E,0                 ; COUNT PROM ADDRESS
+     962/    3BC5 :                     TR0:
+     963/    3BC5 : C4                            MOV       A,E
+     964/    3BC6 : 2C FF                         XRI       0FFH                ; INVERT ADDRESS
+     965/    3BC8 : 55                            OUT       PAD                 ; SET PROM ADDRESS
+     966/    3BC9 : 46 25 3D                      CALL      DELAY               ; WAIT FOR 6-76 BOARD TO LATCH DATA
+     967/    3BCC : 45                            IN        PDI                 ; GET PROM DATA
+     968/    3BCD : 2C FF                         XRI       0FFH
+     969/    3BCF : F8                            MOV       M,A                 ; PUT IN MEMORY
+     970/    3BD0 : 46 F0 3D                      CALL      INCHL               ; BUMP MEMORY POINTER
+     971/    3BD3 : 20                            INR       E                   ; BUMP PROM POINTER
+     972/    3BD4 : 48 C5 3B                      JNZ       TR0                 ; GET ANOTHER BYTE
+     973/    3BD7 : 44 44 38                      JMP       START
+     974/    3BDA :                     ;
+     975/    3BDA :                     ; WRITE ROUTINE.
+     976/    3BDA :                     ;
+     977/    3BDA :                     ; THIS ROUTINE EXPECTS TWO HEXADECIMAL PARAMETERS WHICH ARE 
+     978/    3BDA :                     ; INTERPRETED AS THE BOUNDS OF A MEMORY AREA TO BE ENCODED 
+     979/    3BDA :                     ; INTO HEXADECIMAL FORMANT AND PUNCHED ON THE ASSIGNED PUNCH
+     980/    3BDA :                     ; DEVICE.
+     981/    3BDA :                     ;
+     982/    3BDA :                     WRITE:
+     983/    3BDA : 46 85 3D                      CALL      EXPR                ; GET TWO ADDRESSES
+     984/    3BDD :                     WRI0:
+     985/    3BDD : 46 D4 3D                      CALL      GETAD
+     986/    3BE0 : C6                            MOV       A,L
+     987/    3BE1 : 04 10                         ADI       16
+     988/    3BE3 : D0                            MOV       C,A
+     989/    3BE4 : C5                            MOV       A,H
+     990/    3BE5 : 0C 00                         ACI       0
+     991/    3BE7 : C8                            MOV       B,A
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 20 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+     992/    3BE8 : C4                            MOV       A,E
+     993/    3BE9 : 92                            SUB       C
+     994/    3BEA : D0                            MOV       C,A
+     995/    3BEB : C3                            MOV       A,D
+     996/    3BEC : 99                            SBB       B
+     997/    3BED : 70 F5 3B                      JM        WRI1                ; RECORD LENGTH = 16
+     998/    3BF0 : 06 10                         MVI       A,16
+     999/    3BF2 : 44 F8 3B                      JMP       WRI2
+    1000/    3BF5 :                     WRI1:
+    1001/    3BF5 : C2                            MOV       A,C
+    1002/    3BF6 : 04 11                         ADI       17
+    1003/    3BF8 :                     WRI2:
+    1004/    3BF8 : B0                            ORA       A
+    1005/    3BF9 : 68 44 38                      JZ        START
+    1006/    3BFC : E0                            MOV       E,A                 ; E <- RECORD LENGTH
+    1007/    3BFD : 1E 00                         MVI       D,0                 ; CLEAR CHECKSUM
+    1008/    3BFF : 46 95 3E                      CALL      PEOL
+    1009/    3C02 : 0E 20                         MVI       B,' '
+    1010/    3C04 : 46 B5 3E                      CALL      PO
+    1011/    3C07 : 0E 3A                         MVI       B,':'
+    1012/    3C09 : 46 B5 3E                      CALL      PO
+    1013/    3C0C : C4                            MOV       A,E
+    1014/    3C0D : 46 7B 3E                      CALL      PBYTE               ; PUNCH LENGTH
+    1015/    3C10 : 2E 00 36 08                   LXI       H,ADR1              
+    1016/    3C14 : C7                            MOV       A,M
+    1017/    3C15 : 46 7B 3E                      CALL      PBYTE               ; PUNCH MSB OF ADDRESS
+    1018/    3C18 : 2E 00 36 09                   LXI       H,ADR1+1
+    1019/    3C1C : C7                            MOV       A,M
+    1020/    3C1D : 46 7B 3E                      CALL      PBYTE               ; PUNCH LSB OF ADDRESS
+    1021/    3C20 : A8                            XRA       A
+    1022/    3C21 : 46 7B 3E                      CALL      PBYTE               ; PUNCH RECORD TYPE
+    1023/    3C24 :                     WRI3:
+    1024/    3C24 : 2E 00 36 08                   LXI       H,ADR1
+    1025/    3C28 : C7                            MOV       A,M
+    1026/    3C29 : 30                            INR       L
+    1027/    3C2A : F7                            MOV       L,M
+    1028/    3C2B : E8                            MOV       H,A
+    1029/    3C2C : C7                            MOV       A,M
+    1030/    3C2D : 46 F0 3D                      CALL      INCHL
+    1031/    3C30 : CD                            MOV       B,H
+    1032/    3C31 : D6                            MOV       C,L
+    1033/    3C32 : 2E 00 36 08                   LXI       H,ADR1
+    1034/    3C36 : F9                            MOV       M,B
+    1035/    3C37 : 30                            INR       L
+    1036/    3C38 : FA                            MOV       M,C
+    1037/    3C39 : 46 7B 3E                      CALL      PBYTE               ; PUNCH DATA
+    1038/    3C3C : 21                            DCR       E
+    1039/    3C3D : 48 24 3C                      JNZ       WRI3
+    1040/    3C40 : A8                            XRA       A
+    1041/    3C41 : 93                            SUB       D
+    1042/    3C42 : 46 7B 3E                      CALL      PBYTE               ; PUNCH CHECKSUM
+    1043/    3C45 : 44 DD 3B                      JMP       WRI0
+    1044/    3C48 :                     ;
+    1045/    3C48 :                     ; ERROR EXIT
+    1046/    3C48 :                     ; 
+    1047/    3C48 :                     ; THIS ABNORMAL EXIT IS EXECUTED FOR ALL MONITOR ERROR CONDITIONS.
+    1048/    3C48 :                     ;
+    1049/    3C48 :                     LER:
+    1050/    3C48 : 0E 2A                         MVI       B,'*'
+    1051/    3C4A : 46 52 3C                      CALL      CO
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 21 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1052/    3C4D : 44 44 38                      JMP       START
+    1053/    3C50 :                     ;
+    1054/    3C50 :                     ; SUBROUTINES
+    1055/    3C50 :                     ;
+    1056/    3C50 :                     BLK:
+    1057/    3C50 : 0E 20                         MVI       B,' '               ; PRINT A BLANK
+    1058/    3C52 :                     ;
+    1059/    3C52 :                     ; EXTERNALLY REFERENCED ROUTINE
+    1060/    3C52 :                     ; CONSOLE OUTPUT CODE. VALUE EXPECTED IN B
+    1061/    3C52 :                     ; A,B,H,L, AND FLAGS MODIFIED
+    1062/    3C52 :                     ; STACK USAGE: 2 BYTES
+    1063/    3C52 :                     ;
+    1064/    3C52 :                     CO:                                     ; CONSOLE OUTPUT
+    1065/    3C52 : 2E 00 36 03                   LXI       H,IOBYT
+    1066/    3C56 : C7                            MOV       A,M                 ; GET STATUS BYTE
+    1067/    3C57 : 24 03                         ANI       00000011B ;~CMSK            ; GET CONSOLE BITS
+    1068/    3C59 : 48 67 3C                      JNZ       CO0                 ; TEST FOR CRT
+    1069/    3C5C :                     TTYOUT:
+    1070/    3C5C : 43                            IN        TTS                 ; CONSOLE = TTY
+    1071/    3C5D : 24 04                         ANI       TTYBE
+    1072/    3C5F : 48 5C 3C                      JNZ       TTYOUT              ; LOOP UNTIL READY
+    1073/    3C62 : C1                            MOV       A,B
+    1074/    3C63 : 2C FF                         XRI       0FFH
+    1075/    3C65 : 51                            OUT       TTO                 ; OUTPUT CHARACTER
+    1076/    3C66 : 07                            RET                           ; RETURN
+    1077/    3C67 :                     CO0:
+    1078/    3C67 : 3C 01                         CPI       CCRT                ; CONSOLE = CRT?
+    1079/    3C69 : 48 77 3C                      JNZ       CO1                 ; TEST FOR BATCH
+    1080/    3C6C :                     CRTOUT:
+    1081/    3C6C : 4B                            IN        CRTS                ; CONSOLE = CRT
+    1082/    3C6D : 24 04                         ANI       CRTBE
+    1083/    3C6F : 48 6C 3C                      JNZ       CRTOUT              ; LOOP UNTIL READY
+    1084/    3C72 : C1                            MOV       A,B
+    1085/    3C73 : 2C FF                         XRI       0FFH
+    1086/    3C75 : 59                            OUT       CRTO
+    1087/    3C76 : 07                            RET
+    1088/    3C77 :                     CO1:
+    1089/    3C77 : 3C 02                         CPI       BATCH
+    1090/    3C79 : 68 2C 3E                      JZ        LO                  ; BATCH MODE, OUTPUT = LIST
+    1091/    3C7C : 44 03 37                      JMP       COLOC               ; BRANCH TO USER CONSOLE OUTPUT
+    1092/    3C7F :                     ;
+    1093/    3C7F :                     ; READ TWO ASCII CHARACTERS, DECODE INTO 8 BITS BINARY
+    1094/    3C7F :                     ;
+    1095/    3C7F :                     BYTE:
+    1096/    3C7F : 46 2B 3F                      CALL      RIX                 ; READ CHAR FROM TAPE
+    1097/    3C82 : 46 58 3E                      CALL      NIBBLE              ; CONVERT ASCII TO HEX
+    1098/    3C85 : 02                            RLC
+    1099/    3C86 : 02                            RLC
+    1100/    3C87 : 02                            RLC
+    1101/    3C88 : 02                            RLC                           ; SHIFT FOUR PLACES
+    1102/    3C89 : D0                            MOV       C,A
+    1103/    3C8A : 46 2B 3F                      CALL      RIX
+    1104/    3C8D : 46 58 3E                      CALL      NIBBLE              ; GET LOWER NIBBLE
+    1105/    3C90 : B2                            ORA       C
+    1106/    3C91 : D0                            MOV       C,A
+    1107/    3C92 : 83                            ADD       D                   ; UPDATE CHECKSUM
+    1108/    3C93 : D8                            MOV       D,A
+    1109/    3C94 : C2                            MOV       A,C
+    1110/    3C95 : 07                            RET                           ; RETURN
+    1111/    3C96 :                     ;
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 22 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1112/    3C96 :                     ; EXTERNALLY REFERENCED ROUTINE
+    1113/    3C96 :                     ; CONSOLE INPUT CODE, VALUE RETURNED IN A
+    1114/    3C96 :                     ; A,B,H,L, AND FLAGS MODIFIED
+    1115/    3C96 :                     ; STACK USAGE: 2 BYTES
+    1116/    3C96 :                     ;
+    1117/    3C96 :                     CI:                                     ; CONSOLE INPUT
+    1118/    3C96 : 2E 00 36 03                   LXI       H,IOBYT
+    1119/    3C9A : C7                            MOV       A,M                 ; GET STATUS BYTE
+    1120/    3C9B : 24 03                         ANI       00000011B ;~CMSK               ; GET CONSOLE BITS
+    1121/    3C9D : 48 AA 3C                      JNZ       CI1                 ; TEST FOR CRT
+    1122/    3CA0 :                     TTYIN:
+    1123/    3CA0 : 43                            IN        TTS                 ; TTY STATUS PORT
+    1124/    3CA1 : 24 01                         ANI       TTYDA               ; CHECK FOR DATA AVAILABLE
+    1125/    3CA3 : 48 A0 3C                      JNZ       TTYIN
+    1126/    3CA6 : 41                            IN        TTI                 ; READ THE CHARACTER
+    1127/    3CA7 :                     CI0:
+    1128/    3CA7 : 2C FF                         XRI       0FFH
+    1129/    3CA9 : 07                            RET
+    1130/    3CAA :                     CI1:
+    1131/    3CAA : 3C 01                         CPI       CCRT                ; CONSOLE = CRT?
+    1132/    3CAC : 48 B9 3C                      JNZ       CI2                 ; TEST FOR BATCH
+    1133/    3CAF :                     CRTIN:
+    1134/    3CAF : 4B                            IN        CRTS                ; CRT STATUS PORT
+    1135/    3CB0 : 24 01                         ANI       CRTDA               ; CHECK FOR DATA AVAILABLE
+    1136/    3CB2 : 48 AF 3C                      JNZ       CRTIN               ; NOT READY, CONTINUE LOOPING
+    1137/    3CB5 : 49                            IN        CRTI                ; READ THE CHARACTER
+    1138/    3CB6 : 44 A7 3C                      JMP       CI0
+    1139/    3CB9 :                     CI2:
+    1140/    3CB9 : 3C 02                         CPI       BATCH
+    1141/    3CBB : 68 DB 3E                      JZ        RI                  ; BATCH MODE, INPUT = READER
+    1142/    3CBE : 44 00 37                      JMP       CILOC               ; CONSOLE = USER DEVICE
+    1143/    3CC1 :                     ;
+    1144/    3CC1 :                     ; CONVERT 4 BIT HEX VALUE TO ASCII CHARACTER
+    1145/    3CC1 :                     ;
+    1146/    3CC1 :                     CONV:
+    1147/    3CC1 : 3C 0A                         CPI       10
+    1148/    3CC3 : 70 C8 3C                      JM        CN0                 ; LESS THAN 10 (0-9)
+    1149/    3CC6 : 04 07                         ADI       'A'-'0'-10          ; ADJUST OF (A-F)
+    1150/    3CC8 :                     CN0:
+    1151/    3CC8 : 04 30                         ADI       '0'                 ; ADD BIAS FOR ASCII
+    1152/    3CCA : C8                            MOV       B,A
+    1153/    3CCB : 07                            RET                           ; RETURN
+    1154/    3CCC :                     ;
+    1155/    3CCC :                     ; TYPE CARRIAGE RETURN AND LINE FEED ON CONSOLE
+    1156/    3CCC :                     ;
+    1157/    3CCC :                     CRLF:
+    1158/    3CCC : 0E 0D                         MVI       B,CR                ; <CR>
+    1159/    3CCE : 46 52 3C                      CALL      CO
+    1160/    3CD1 : 0E 0A                         MVI       B,LF                ; <LF>
+    1161/    3CD3 : 44 52 3C                      JMP       CO
+    1162/    3CD6 :                     ;
+    1163/    3CD6 :                     ; EXTERNALLY REFERENCED ROUTINE.
+    1164/    3CD6 :                     ; CONSOLE INPUT STATUS CODE
+    1165/    3CD6 :                     ; A,FLAGS MODIFIED
+    1166/    3CD6 :                     ; STACK USAGE: 2 BYTES
+    1167/    3CD6 :                     ;
+    1168/    3CD6 :                     CSTS:                                   ; CONSOLE INPUT STATUS
+    1169/    3CD6 : 2E 00 36 03                   LXI       H,IOBYT
+    1170/    3CDA : C7                            MOV       A,M                 ; GET STATUS BYTE
+    1171/    3CDB : 24 03                         ANI       00000011B ;~CMSK            ; CONSOLE = TTY?
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 23 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1172/    3CDD : 48 E4 3C                      JNZ       CS0                 ; CONSOLE = CRT
+    1173/    3CE0 : 43                            IN        TTS                 ; GET TTY STATUS
+    1174/    3CE1 : 44 EA 3C                      JMP       CS1
+    1175/    3CE4 :                     CS0:
+    1176/    3CE4 : 3C 01                         CPI       CCRT
+    1177/    3CE6 : 48 F2 3C                      JNZ       CS3
+    1178/    3CE9 : 4B                            IN        CRTS                ; GET CRT STATUS
+    1179/    3CEA :                     CS1:
+    1180/    3CEA : 24 01                         ANI       TTYDA
+    1181/    3CEC : 06 00                         MVI       A,FALSE             ; RETURN FALSE IF NO DATA AVAILABLE
+    1182/    3CEE :                     CS2:
+    1183/    3CEE : 0B                            RNZ
+    1184/    3CEF : 2C FF                         XRI       0FFH
+    1185/    3CF1 : 07                            RET                           ; RETURN
+    1186/    3CF2 :                     CS3:
+    1187/    3CF2 : 3C 02                         CPI       BATCH
+    1188/    3CF4 : 06 01                         MVI       A,TRUE
+    1189/    3CF6 : 68 EE 3C                      JZ        CS2
+    1190/    3CF9 : 44 18 37                      JMP       CSLOC
+    1191/    3CFC :                     ;
+    1192/    3CFC :                     ; READ BNPF TAPE RECORD, BUILD BYTE, STORE IN C-REGISTER
+    1193/    3CFC :                     ; IF ERROR ABORT COMMAND
+    1194/    3CFC :                     ;
+    1195/    3CFC :                     DECODE:
+    1196/    3CFC : 46 2B 3F                      CALL      RIX                 ; READ TAPE
+    1197/    3CFF : 3C 42                         CPI       'B'                 ; SCAN FOR 'B'
+    1198/    3D01 : 48 FC 3C                      JNZ       DECODE
+    1199/    3D04 : 16 01                         MVI       C,1                 ; INITIALIZE MEMORY
+    1200/    3D06 :                     DC0:
+    1201/    3D06 : 46 2B 3F                      CALL      RIX                 ; GET DATA
+    1202/    3D09 : 3C 4E                         CPI       'N'                 ; CHECK FOR 'N'
+    1203/    3D0B : 48 1D 3D                      JNZ       DC2                 ; NO, CHECK FOR 'P'
+    1204/    3D0E :                                                             ; CARRY = 0
+    1205/    3D0E :                     DC1:
+    1206/    3D0E : C2                            MOV       A,C                 ; SHIFT IN DATA BIT
+    1207/    3D0F : 12                            RAL
+    1208/    3D10 : D0                            MOV       C,A
+    1209/    3D11 : 40 06 3D                      JNC       DC0                 ; IF CARRY IS SET, 8 BITS READ
+    1210/    3D14 : 46 2B 3F                      CALL      RIX                 ; TEST FOR REQ'D 'F'
+    1211/    3D17 : 3C 46                         CPI       'F'
+    1212/    3D19 : 48 48 3C                      JNZ       LER
+    1213/    3D1C : 07                            RET                           ; RETURN
+    1214/    3D1D :                     DC2:
+    1215/    3D1D : 04 B0                         ADI       -'P'
+    1216/    3D1F : 48 48 3C                      JNZ       LER                 ; ERROR
+    1217/    3D22 : 44 0E 3D                      JMP       DC1                 ; CARRY IS SET
+    1218/    3D25 :                     ;
+    1219/    3D25 :                     ; 1.0 MS DELAY (INCLUDING CALL, DCR OR INC, AND JUMP IN CALLING LOOP)
+    1220/    3D25 :                     ;
+    1221/    3D25 :                     DELAY:
+    1222/    3D25 : 0E 17                         MVI       B,DLY
+    1223/    3D27 :                     DL0:
+    1224/    3D27 : 09                            DCR       B
+    1225/    3D28 : 48 27 3D                      JNZ       DL0
+    1226/    3D2B : 07                            RET                           ; RETURN
+    1227/    3D2C :                     ;
+    1228/    3D2C :                     ; CONVERT BINARY NUMBER TO A STRING OF ASCII DIGITS
+    1229/    3D2C :                     ; HL = BINARY NUMBER
+    1230/    3D2C :                     ; DE = DIVISOR (DESCENDING POWERS OF 10)
+    1231/    3D2C :                     ; C = LEADING ZERO SUPPRESSION CHARACTER
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 24 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1232/    3D2C :                     ; A,B = TEMPORARIES
+    1233/    3D2C :                     DIGIT:
+    1234/    3D2C : 0E 30                         MVI       B,'0'               ; INITIALIZE CHARACTER
+    1235/    3D2E :                     DG0:
+    1236/    3D2E : C6                            MOV       A,L                 ; SUB DENOM (DE) FROM NUMERATOR (HL)
+    1237/    3D2F : 94                            SUB       E
+    1238/    3D30 : F0                            MOV       L,A
+    1239/    3D31 : C5                            MOV       A,H
+    1240/    3D32 : 9B                            SBB       D
+    1241/    3D33 : E8                            MOV       H,A
+    1242/    3D34 : 60 3B 3D                      JC        DG1                 ; NEGATIVE RESULT, ALL DONE
+    1243/    3D37 : 08                            INR       B                   ; COUNT NUMBER OF SUBTRACTS
+    1244/    3D38 : 44 2E 3D                      JMP       DG0
+    1245/    3D3B :                     DG1:
+    1246/    3D3B : C6                            MOV       A,L
+    1247/    3D3C : 84                            ADD       E
+    1248/    3D3D : F0                            MOV       L,A
+    1249/    3D3E : C5                            MOV       A,H
+    1250/    3D3F : 8B                            ADC       D
+    1251/    3D40 : E8                            MOV       H,A
+    1252/    3D41 : C1                            MOV       A,B
+    1253/    3D42 : 3C 30                         CPI       '0'                 ; CHECK FOR LEADING ZERO SUPPRESSION
+    1254/    3D44 : 48 50 3D                      JNZ       DG3
+    1255/    3D47 : CA                            MOV       B,C
+    1256/    3D48 :                     DG2:
+    1257/    3D48 : DD                            MOV       D,H
+    1258/    3D49 : E6                            MOV       E,L
+    1259/    3D4A : 46 B5 3E                      CALL      PO
+    1260/    3D4D : EB                            MOV       H,D
+    1261/    3D4E : F4                            MOV       L,E
+    1262/    3D4F : 07                            RET                           ; PUNCH CHARACTER
+    1263/    3D50 :                     DG3:
+    1264/    3D50 : 16 30                         MVI       C,'0'
+    1265/    3D52 : 44 48 3D                      JMP       DG2
+    1266/    3D55 :                     ;
+    1267/    3D55 :                     ; ENCODE A BPNF WORD AND PUNCH IT
+    1268/    3D55 :                     ;
+    1269/    3D55 :                     ENCODE:
+    1270/    3D55 : DD                            MOV       D,H                 ; SAVE HL
+    1271/    3D56 : E6                            MOV       E,L
+    1272/    3D57 : 0E 42                         MVI       B,'B'               ; PUNCH A 'B'
+    1273/    3D59 : 46 B5 3E                      CALL      PO
+    1274/    3D5C : 16 08                         MVI       C,8                 ; 8 BIT COUNT
+    1275/    3D5E :                     EN0:
+    1276/    3D5E : EB                            MOV       H,D
+    1277/    3D5F : F4                            MOV       L,E
+    1278/    3D60 : 06 09                         MVI       A,9
+    1279/    3D62 : 92                            SUB       C
+    1280/    3D63 : C8                            MOV       B,A
+    1281/    3D64 : C7                            MOV       A,M
+    1282/    3D65 :                     EN1:
+    1283/    3D65 : 02                            RLC
+    1284/    3D66 : 09                            DCR       B
+    1285/    3D67 : 48 65 3D                      JNZ       EN1
+    1286/    3D6A : 40 80 3D                      JNC       EN3
+    1287/    3D6D : 0E 50                         MVI       B,'P'
+    1288/    3D6F :                     EN2:
+    1289/    3D6F : 46 B5 3E                      CALL      PO
+    1290/    3D72 : 11                            DCR       C
+    1291/    3D73 : 48 5E 3D                      JNZ       EN0
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 25 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1292/    3D76 : 0E 46                         MVI       B,'F'
+    1293/    3D78 : 46 B5 3E                      CALL      PO
+    1294/    3D7B : 0E 20                         MVI       B,' '
+    1295/    3D7D : 44 B5 3E                      JMP       PO
+    1296/    3D80 :                     EN3:
+    1297/    3D80 : 0E 4E                         MVI       B,'N'
+    1298/    3D82 : 44 6F 3D                      JMP       EN2
+    1299/    3D85 :                     ;
+    1300/    3D85 :                     ; EVALUATE EXPRESSION: <EXPR>,<EXPR>,<EXPR>
+    1301/    3D85 :                     ;
+    1302/    3D85 :                     EXPR:
+    1303/    3D85 : DD                            MOV       D,H                 ; SAVE HL
+    1304/    3D86 : E6                            MOV       E,L
+    1305/    3D87 : 2E 00 36 04                   LXI       H,HPRIME
+    1306/    3D8B : FB                            MOV       M,D
+    1307/    3D8C : 30                            INR       L
+    1308/    3D8D : FC                            MOV       M,E
+    1309/    3D8E : 1E 00                         MVI       D,0                 ; D,E = 0
+    1310/    3D90 : E3                            MOV       E,D
+    1311/    3D91 :                     EX0:
+    1312/    3D91 : 46 49 3F                      CALL      TI                  ; GET A CHARACTER
+    1313/    3D94 :                     EX1:
+    1314/    3D94 : C8                            MOV       B,A
+    1315/    3D95 : 46 58 3E                      CALL      NIBBLE              ; CONVERT TO HEX
+    1316/    3D98 : 60 AE 3D                      JC        EX2                 ; NOT LEGAL CHAR, TREAT AS DELIMITER
+    1317/    3D9B : C8                            MOV       B,A
+    1318/    3D9C : 46 42 3F                      CALL      SLDE
+    1319/    3D9F : 46 42 3F                      CALL      SLDE
+    1320/    3DA2 : 46 42 3F                      CALL      SLDE
+    1321/    3DA5 : 46 42 3F                      CALL      SLDE
+    1322/    3DA8 : C1                            MOV       A,B
+    1323/    3DA9 : B4                            ORA       E
+    1324/    3DAA : E0                            MOV       E,A
+    1325/    3DAB : 44 91 3D                      JMP       EX0                 ; GET ANOTHER CHARACTER
+    1326/    3DAE :                     EX2:
+    1327/    3DAE : 2E 00 36 04                   LXI       H,HPRIME
+    1328/    3DB2 : C7                            MOV       A,M
+    1329/    3DB3 : 30                            INR       L
+    1330/    3DB4 : F7                            MOV       L,M
+    1331/    3DB5 : E8                            MOV       H,A
+    1332/    3DB6 : FB                            MOV       M,D                 ; PUT MSB IN MEMORY
+    1333/    3DB7 : 30                            INR       L
+    1334/    3DB8 : FC                            MOV       M,E                 ; PUT LSB IN MEMORY
+    1335/    3DB9 : 30                            INR       L
+    1336/    3DBA : C1                            MOV       A,B                 ; RESTORE DELIMITER
+    1337/    3DBB : 3C 2C                         CPI       ','
+    1338/    3DBD : 68 CF 3D                      JZ        EX3
+    1339/    3DC0 : 3C 20                         CPI       ' '
+    1340/    3DC2 : 68 CF 3D                      JZ        EX3
+    1341/    3DC5 : 3C 0D                         CPI       CR
+    1342/    3DC7 : 48 48 3C                      JNZ       LER
+    1343/    3DCA : 11                            DCR       C
+    1344/    3DCB : 48 48 3C                      JNZ       LER
+    1345/    3DCE : 07                            RET
+    1346/    3DCF :                     EX3:
+    1347/    3DCF : 11                            DCR       C
+    1348/    3DD0 : 48 85 3D                      JNZ       EXPR
+    1349/    3DD3 : 07                            RET
+    1350/    3DD4 :                     ;
+    1351/    3DD4 :                     ; GET ADDRESS FROM MEMORY AND PUT IN HL AND DE
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 26 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1352/    3DD4 :                     ;
+    1353/    3DD4 :                     GETAD:
+    1354/    3DD4 : 2E 00 36 08                   LXI       H,ADR1              ; ADDRESS OF FIRST PARAMETER
+    1355/    3DD8 : CF                            MOV       B,M                 ; MSB OF LOW ADDRESS
+    1356/    3DD9 : 30                            INR       L
+    1357/    3DDA : D7                            MOV       C,M                 ; LSB OF LOW ADDRESS
+    1358/    3DDB : 30                            INR       L
+    1359/    3DDC : DF                            MOV       D,M                 ; MSB OF HIGH ADDRESS
+    1360/    3DDD : 30                            INR       L
+    1361/    3DDE : E7                            MOV       E,M                 ; LSB OF HIGH ADDRESS
+    1362/    3DDF : E9                            MOV       H,B                 ; RESET HL
+    1363/    3DE0 : F2                            MOV       L,C
+    1364/    3DE1 : 07                            RET
+    1365/    3DE2 :                     ;
+    1366/    3DE2 :                     ; COMPARE HL WITH DE:
+    1367/    3DE2 :                     ; IF HL < DE THEN CARRY = 0;
+    1368/    3DE2 :                     ; IF HL = DE THEN CARRY = 0;
+    1369/    3DE2 :                     ; IF HL > DE THEN CARRY = 1;
+    1370/    3DE2 :                     ;
+    1371/    3DE2 :                     HILO:
+    1372/    3DE2 : 46 F0 3D                      CALL      INCHL               ; BUMP HL
+    1373/    3DE5 : C4                            MOV       A,E                 ; DE - HL, SET/RESET CARRY
+    1374/    3DE6 : 96                            SUB       L
+    1375/    3DE7 : C3                            MOV       A,D
+    1376/    3DE8 : 9D                            SBB       H
+    1377/    3DE9 : 07                            RET                           ; RETURN
+    1378/    3DEA :                     ;
+    1379/    3DEA :                     ; CONVERT NIBBLE IN A-REGISTER TO ASCII IN A-REGISTER
+    1380/    3DEA :                     ; AND PRINT ON TELEPRINTER
+    1381/    3DEA :                     ;
+    1382/    3DEA :                     HXD:
+    1383/    3DEA : 46 C1 3C                      CALL      CONV
+    1384/    3DED : 44 52 3C                      JMP       CO
+    1385/    3DF0 :                     ;
+    1386/    3DF0 :                     ; INCREMENT H AND L
+    1387/    3DF0 :                     ;
+    1388/    3DF0 :                     INCHL:
+    1389/    3DF0 : 30                            INR       L
+    1390/    3DF1 : 0B                            RNZ
+    1391/    3DF2 : 28                            INR       H
+    1392/    3DF3 : 07                            RET
+    1393/    3DF4 :                     ;
+    1394/    3DF4 :                     ; EXTERNALLY REFERENCED ROUTINE
+    1395/    3DF4 :                     ; I/O SYSTEM STATUS CODE
+    1396/    3DF4 :                     ; STATUS BYTE RETURNED IN A
+    1397/    3DF4 :                     ; STACK USAGE: 2 BYTES
+    1398/    3DF4 :                     ;
+    1399/    3DF4 :                     IOCHK:
+    1400/    3DF4 : 2E 00 36 03                   LXI       H,IOBYT
+    1401/    3DF8 : C7                            MOV       A,M                 ; GET STATUS BYTE
+    1402/    3DF9 : 07                            RET                           ; RETURN
+    1403/    3DFA :                     ;
+    1404/    3DFA :                     ; EXTERNALLY REFERENCED ROUTINE
+    1405/    3DFA :                     ; SET I/O CONFIGURATION
+    1406/    3DFA :                     ; VALUE EXPECTED IN B
+    1407/    3DFA :                     ; STACK USAGE: 2 BYTES
+    1408/    3DFA :                     ;
+    1409/    3DFA :                     IOSET:
+    1410/    3DFA : 2E 00 36 03                   LXI       H,IOBYT             ; POINT HL AT IOBYT
+    1411/    3DFE : F9                            MOV       M,B
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 27 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1412/    3DFF : 07                            RET                           ; RETURN
+    1413/    3E00 :                     ;
+    1414/    3E00 :                     ; PRINT CONTENTS OF HL IN HEX ON CONSOLE DEVICE
+    1415/    3E00 :                     ;
+    1416/    3E00 :                     LADR:
+    1417/    3E00 : DD                            MOV       D,H
+    1418/    3E01 : E6                            MOV       E,L
+    1419/    3E02 : C3                            MOV       A,D
+    1420/    3E03 : 46 10 3E                      CALL      LBYTE
+    1421/    3E06 : C4                            MOV       A,E
+    1422/    3E07 : 46 10 3E                      CALL      LBYTE
+    1423/    3E0A : 46 50 3C                      CALL      BLK
+    1424/    3E0D : EB                            MOV       H,D
+    1425/    3E0E : F4                            MOV       L,E
+    1426/    3E0F : 07                            RET
+    1427/    3E10 :                     ;
+    1428/    3E10 :                     ; LIST A BYTE AS 2 ASCII CHARACTERS
+    1429/    3E10 :                     ;
+    1430/    3E10 :                     LBYTE:
+    1431/    3E10 : D0                            MOV       C,A                 ; SAVE A COPY OF A
+    1432/    3E11 : 0A                            RRC
+    1433/    3E12 : 0A                            RRC
+    1434/    3E13 : 0A                            RRC
+    1435/    3E14 : 0A                            RRC
+    1436/    3E15 : 24 0F                         ANI       0FH                 ; UPPER 4 BITS
+    1437/    3E17 : 46 EA 3D                      CALL      HXD
+    1438/    3E1A : C2                            MOV       A,C                 ; RETRIEVE ORIGINAL VALUE
+    1439/    3E1B : 24 0F                         ANI       0FH                 ; LOWER 4 BITS
+    1440/    3E1D : 44 EA 3D                      JMP       HXD
+    1441/    3E20 :                     ;
+    1442/    3E20 :                     ; PUNCH 6 INCHES OF LEADER
+    1443/    3E20 :                     ;
+    1444/    3E20 :                     LEAD:
+    1445/    3E20 : 16 3C                         MVI       C,60                ; SET TO PUNCH 6 INCHES OF NULLS
+    1446/    3E22 :                     LE0:
+    1447/    3E22 : 0E 00                         MVI       B,0
+    1448/    3E24 : 46 B5 3E                      CALL      PO
+    1449/    3E27 : 11                            DCR       C
+    1450/    3E28 : 48 22 3E                      JNZ       LE0
+    1451/    3E2B : 07                            RET                           ; RETURN
+    1452/    3E2C :                     ;
+    1453/    3E2C :                     ; EXTERNALLY REFERENCED ROUTINE
+    1454/    3E2C :                     ; LIST OUTPUT CODE
+    1455/    3E2C :                     ; VALUE EXPECTED IN B
+    1456/    3E2C :                     ; A,B,H,L, AND FLAGS MODIFIED
+    1457/    3E2C :                     ; STACK USAGE: 2 BYTES
+    1458/    3E2C :                     ;
+    1459/    3E2C :                     LO:                                     ; LIST OUTPUT
+    1460/    3E2C : 2E 00 36 03                   LXI       H,IOBYT             
+    1461/    3E30 : C7                            MOV       A,M                 ; GET STATUS BYTE
+    1462/    3E31 : 24 C0                         ANI       ~LMSK            ; GET LIST BITS
+    1463/    3E33 : 68 5C 3C                      JZ        TTYOUT              ; LIST = TTY
+    1464/    3E36 : 3C 40                         CPI       LCRT
+    1465/    3E38 : 68 6C 3C                      JZ        CRTOUT              ; LIST = CRT
+    1466/    3E3B : 3C 80                         CPI       LUSE1               ; TEST FOR USER DEFINED LIST DEVICE
+    1467/    3E3D : 68 12 37                      JZ        L1LOC               ; BRANCH TO USER DEVICE
+    1468/    3E40 : 44 15 37                      JMP       L2LOC               ; ELSE BRANCH TO USER LIST 2
+    1469/    3E43 :                     ;
+    1470/    3E43 :                     ; EXTERNALLY REFERENCED ROUTINE
+    1471/    3E43 :                     ; RETURN ADDRESS OF END OF MEMORY TO USER
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 28 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1472/    3E43 :                     ; A,B,C,H,L, AND FLAGS MODIFIED
+    1473/    3E43 :                     ; VALUE RETURNED IN (C,A)
+    1474/    3E43 :                     ; STACK USAGE: 2 BYTES
+    1475/    3E43 :                     ;
+    1476/    3E43 :                     MEMCK:
+    1477/    3E43 : 2E 00 36 00                   LXI       H,0
+    1478/    3E47 :                     M0:
+    1479/    3E47 : CF                            MOV       B,M
+    1480/    3E48 : 3E AA                         MVI       M,0AAH
+    1481/    3E4A : C7                            MOV       A,M
+    1482/    3E4B : F9                            MOV       M,B
+    1483/    3E4C : 28                            INR       H
+    1484/    3E4D : 3C AA                         CPI       0AAH
+    1485/    3E4F : 68 47 3E                      JZ        M0
+    1486/    3E52 : 29                            DCR       H
+    1487/    3E53 : 29                            DCR       H
+    1488/    3E54 : 31                            DCR       L
+    1489/    3E55 : C6                            MOV       A,L
+    1490/    3E56 : D5                            MOV       C,H
+    1491/    3E57 : 07                            RET
+    1492/    3E58 :                     ;
+    1493/    3E58 :                     ; DECODE ASCII CHAR IN A-REGISTER INTO HEX DIGIT IN A-REGISTER
+    1494/    3E58 :                     ; FILTER OUT ALL CHARACTERS NOT IN THE SEQUENCE (0...9,A...F).
+    1495/    3E58 :                     ; RETURN CARRY = 1 FOR ILLEGAL CHARACTERS
+    1496/    3E58 :                     ;
+    1497/    3E58 :                     NIBBLE:
+    1498/    3E58 : 14 30                         SUI       '0'
+    1499/    3E5A : 23                            RC
+    1500/    3E5B : 04 E9                         ADI       '0'-'G'
+    1501/    3E5D : 23                            RC
+    1502/    3E5E : 04 06                         ADI       6
+    1503/    3E60 : 50 66 3E                      JP        NI0
+    1504/    3E63 : 04 07                         ADI       7
+    1505/    3E65 : 23                            RC
+    1506/    3E66 :                     NI0:
+    1507/    3E66 : 04 0A                         ADI       10
+    1508/    3E68 : B0                            ORA       A
+    1509/    3E69 : 07                            RET                           ; RETURN
+    1510/    3E6A :                     ;
+    1511/    3E6A :                     ; DISREGARD NOISE CHARACTERS
+    1512/    3E6A :                     ;
+    1513/    3E6A :                     NOISE:
+    1514/    3E6A : 46 49 3F                      CALL      TI
+    1515/    3E6D : 3C 3D                         CPI       '='
+    1516/    3E6F : 48 6A 3E                      JNZ       NOISE
+    1517/    3E72 :                     NO0:
+    1518/    3E72 : 46 49 3F                      CALL      TI
+    1519/    3E75 : 3C 20                         CPI       ' '
+    1520/    3E77 : 68 72 3E                      JZ        NO0
+    1521/    3E7A : 07                            RET                           ; RETURN
+    1522/    3E7B :                     ;
+    1523/    3E7B :                     ; PUNCH A BYTE AS 2 ASCII CHARACTERS
+    1524/    3E7B :                     ;
+    1525/    3E7B :                     PBYTE:
+    1526/    3E7B : D0                            MOV       C,A
+    1527/    3E7C : 0A                            RRC
+    1528/    3E7D : 0A                            RRC
+    1529/    3E7E : 0A                            RRC
+    1530/    3E7F : 0A                            RRC
+    1531/    3E80 : 24 0F                         ANI       0FH
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 29 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1532/    3E82 : 46 C1 3C                      CALL      CONV
+    1533/    3E85 : 46 B5 3E                      CALL      PO
+    1534/    3E88 : C2                            MOV       A,C
+    1535/    3E89 : 24 0F                         ANI       0FH
+    1536/    3E8B : 46 C1 3C                      CALL      CONV
+    1537/    3E8E : 46 B5 3E                      CALL      PO
+    1538/    3E91 : C2                            MOV       A,C
+    1539/    3E92 : 83                            ADD       D
+    1540/    3E93 : D8                            MOV       D,A
+    1541/    3E94 : 07                            RET                           ; RETURN
+    1542/    3E95 :                     ;
+    1543/    3E95 :                     ; PUNCH CR,LF
+    1544/    3E95 :                     ;
+    1545/    3E95 :                     PEOL:
+    1546/    3E95 : 0E 0D                         MVI       B,CR
+    1547/    3E97 : 46 B5 3E                      CALL      PO
+    1548/    3E9A : 0E 0A                         MVI       B,LF
+    1549/    3E9C : 44 B5 3E                      JMP       PO
+    1550/    3E9F :                     ;
+    1551/    3E9F :                     ; PULSE A PROM LOCATION
+    1552/    3E9F :                     ; HL POINTS TO DATA IN MEMORY
+    1553/    3E9F :                     ; PROM ADDRESS IS ALREADY SET
+    1554/    3E9F :                     ;
+    1555/    3E9F :                     PGRM:
+    1556/    3E9F : C7                            MOV       A,M                 ; GET DATA FROM MEMORY
+    1557/    3EA0 : 2C FF                         XRI       0FFH                ; INVERT IT
+    1558/    3EA2 : 57                            OUT       PDO                 ; OUTPUT IT
+    1559/    3EA3 : 06 80                         MVI       A,PROGO             ; PULSE FROM PROGRAMMER
+    1560/    3EA5 : 53                            OUT       PROMC
+    1561/    3EA6 : 06 00                         MVI       A,PRONO
+    1562/    3EA8 : 53                            OUT       PROMC
+    1563/    3EA9 : C3                            MOV       A,D                 ; SAVE D
+    1564/    3EAA : 1E 14                         MVI       D,LDLY              ; DELAY 20 MS. FOR PROGRAMMER SETTLING
+    1565/    3EAC :                     PG0:
+    1566/    3EAC : 46 25 3D                      CALL      DELAY
+    1567/    3EAF : 19                            DCR       D
+    1568/    3EB0 : 48 AC 3E                      JNZ       PG0
+    1569/    3EB3 : D8                            MOV       D,A
+    1570/    3EB4 : 07                            RET
+    1571/    3EB5 :                     ;
+    1572/    3EB5 :                     ; EXTERNALLY REFERENCED ROUTINE
+    1573/    3EB5 :                     ; PUNCH OUTPUT CODE, VALUE EXPECTED IN B
+    1574/    3EB5 :                     ; A,B,H,L, AND FLAGS MODIFIED
+    1575/    3EB5 :                     ; STACK USAGE: 2 BYTES
+    1576/    3EB5 :                     ;
+    1577/    3EB5 :                     PO:                                     ; PUNCH OUTPUT
+    1578/    3EB5 : 2E 00 36 03                   LXI       H,IOBYT
+    1579/    3EB9 : C7                            MOV       A,M                 ; GET STATUS BYTE
+    1580/    3EBA : 24 30                         ANI       00110000B;~PMSK               ; GET PUNCH BITS
+    1581/    3EBC : 68 5C 3C                      JZ        TTYOUT              ; NO, PUNCH = TTY
+    1582/    3EBF : 3C 10                         CPI       PPTP                ; TEST FOR PTP
+    1583/    3EC1 : 48 D3 3E                      JNZ       PO1                 ; TEST FOR USER DEVICE(S)
+    1584/    3EC4 :                     PO0:                                    ; PUNCH = PTP
+    1585/    3EC4 : 43                            IN        PTPS                ; GET STATUS
+    1586/    3EC5 : 24 40                         ANI       PRDY                ; CHECK STATUS
+    1587/    3EC7 : 68 C4 3E                      JZ        PO0                 ; LOOP UNTIL READY
+    1588/    3ECA : C1                            MOV       A,B
+    1589/    3ECB : 57                            OUT       PTPO
+    1590/    3ECC : 06 0A                         MVI       A,PTPGO             ; START PUNCH
+    1591/    3ECE : 53                            OUT       PTPC
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 30 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1592/    3ECF : 06 08                         MVI       A,PTPNO             ; STOP PUNCH
+    1593/    3ED1 : 53                            OUT       PTPC
+    1594/    3ED2 : 07                            RET
+    1595/    3ED3 :                     PO1:
+    1596/    3ED3 : 3C 20                         CPI       PUSE1
+    1597/    3ED5 : 68 0C 37                      JZ        P1LOC
+    1598/    3ED8 : 44 0F 37                      JMP       P2LOC
+    1599/    3EDB :                     ;
+    1600/    3EDB :                     ; EXTERNALLY REFERENCED ROUTINE
+    1601/    3EDB :                     ; READER INPUT CODE
+    1602/    3EDB :                     ; VALUE RETURNED IN A
+    1603/    3EDB :                     ; A,B,H,L, AND FLAGS MODIFIED
+    1604/    3EDB :                     ; STACK USAGE: 4 BYTES
+    1605/    3EDB :                     ;
+    1606/    3EDB :                     RI:                                     ; READER INPUT
+    1607/    3EDB : 2E 00 36 03                   LXI       H,IOBYT             ; POINT HL AT IOBYT
+    1608/    3EDF : C7                            MOV       A,M
+    1609/    3EE0 : 24 0C                         ANI       00001100B ; ~RMSK               ; READER = PTR?
+    1610/    3EE2 : 48 03 3F                      JNZ       RI3                 ; BRANCH TO PTR ROUTINE
+    1611/    3EE5 : 06 09                         MVI       A,TTYGO             ; READER = TTY
+    1612/    3EE7 : 53                            OUT       TTC
+    1613/    3EE8 : 06 08                         MVI       A,TTYNO
+    1614/    3EEA : 53                            OUT       TTC
+    1615/    3EEB : 2E FA                         MVI       H,TOUT              ; SET TIMER FOR READER TIMEOUT
+    1616/    3EED :                     RI0:
+    1617/    3EED : 43                            IN        TTS
+    1618/    3EEE : 24 01                         ANI       TTYDA
+    1619/    3EF0 : 68 FF 3E                      JZ        RI2                 ; DATA IS READY
+    1620/    3EF3 : 46 25 3D                      CALL      DELAY               ; DELAY 1.0 MS
+    1621/    3EF6 : 29                            DCR       H
+    1622/    3EF7 : 48 ED 3E                      JNZ       RI0
+    1623/    3EFA :                     RI1:
+    1624/    3EFA : B0                            ORA       A
+    1625/    3EFB : 06 01                         MVI       A,1
+    1626/    3EFD : 1A                            RAR                           ; SET CARRY INDICATING EOF
+    1627/    3EFE : 07                            RET                           ; RETURN
+    1628/    3EFF :                     RI2:
+    1629/    3EFF : 41                            IN        TTI
+    1630/    3F00 : 2C FF                         XRI       0FFH                ; INVERT DATA, CLEAR CARRY
+    1631/    3F02 : 07                            RET                           ; RETURN
+    1632/    3F03 :                     RI3:                                    ; PTR ROUTINE
+    1633/    3F03 : 3C 04                         CPI       RPTR
+    1634/    3F05 : 48 23 3F                      JNZ       RI6
+    1635/    3F08 : 06 0C                         MVI       A,PTRGO
+    1636/    3F0A : 53                            OUT       PTRC
+    1637/    3F0B : 06 08                         MVI       A,PTRNO
+    1638/    3F0D : 53                            OUT       PTRC
+    1639/    3F0E : 2E FA                         MVI       H,TOUT              ; SET TIMER FOR READER TIMEOUT
+    1640/    3F10 :                     RI4:
+    1641/    3F10 : 43                            IN        PTRS
+    1642/    3F11 : 24 20                         ANI       PTRDA
+    1643/    3F13 : 48 20 3F                      JNZ       RI5
+    1644/    3F16 : 46 25 3D                      CALL      DELAY               ; DELAY 1.0 MS
+    1645/    3F19 : 29                            DCR       H
+    1646/    3F1A : 48 10 3F                      JNZ       RI4
+    1647/    3F1D : 44 FA 3E                      JMP       RI1
+    1648/    3F20 :                     RI5:
+    1649/    3F20 : 47                            IN        PTRI                ; GET THE DATA
+    1650/    3F21 : B0                            ORA       A                   ; CLEAR CARRY
+    1651/    3F22 : 07                            RET                           ; RETURN
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 31 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1652/    3F23 :                     RI6:
+    1653/    3F23 : 3C 08                         CPI       RUSE1
+    1654/    3F25 : 68 06 37                      JZ        R1LOC
+    1655/    3F28 : 68 09 37                      JZ        R2LOC
+    1656/    3F2B :                     ;
+    1657/    3F2B :                     ; GET CHARACTER FROM READER, MASK OFF PARITY BIT
+    1658/    3F2B :                     ; 
+    1659/    3F2B :                     RIX:
+    1660/    3F2B : 46 DB 3E                      CALL      RI
+    1661/    3F2E : 60 48 3C                      JC        LER
+    1662/    3F31 : 24 7F                         ANI       7FH
+    1663/    3F33 : 07                            RET                           ; RETURN
+    1664/    3F34 :                     ;
+    1665/    3F34 :                     ; SAVE HL AND DE IN MEMORY
+    1666/    3F34 :                     ;
+    1667/    3F34 :                     SAVIT:
+    1668/    3F34 : CD                            MOV       B,H                 ; SAVE HL
+    1669/    3F35 : D6                            MOV       C,L
+    1670/    3F36 : 2E 00 36 08                   LXI       H,ADR1              ; POINT TO FIRST PARAMETER
+    1671/    3F3A : F9                            MOV       M,B                 ; MSB OF LOW ADDRESS
+    1672/    3F3B : 30                            INR       L
+    1673/    3F3C : FA                            MOV       M,C                 ; LSB OF LOW ADDRESS
+    1674/    3F3D : 30                            INR       L
+    1675/    3F3E : FB                            MOV       M,D                 ; MSB OF HIGH ADDRESS
+    1676/    3F3F : 30                            INR       L
+    1677/    3F40 : FC                            MOV       M,E                 ; LSB OF HIGH ADDRESS
+    1678/    3F41 : 07                            RET
+    1679/    3F42 :                     ;
+    1680/    3F42 :                     ; SHIFT DE LEFT 1 PLACE
+    1681/    3F42 :                     ;
+    1682/    3F42 :                     SLDE:
+    1683/    3F42 : C4                            MOV       A,E
+    1684/    3F43 : 80                            ADD       A
+    1685/    3F44 : E0                            MOV       E,A
+    1686/    3F45 : C3                            MOV       A,D
+    1687/    3F46 : 88                            ADC       A
+    1688/    3F47 : D8                            MOV       D,A
+    1689/    3F48 : 07                            RET
+    1690/    3F49 :                     ;
+    1691/    3F49 :                     ; INPUT FROM CONSOLE, ECHOED AND RETURNED IN A
+    1692/    3F49 :                     ;
+    1693/    3F49 :                     TI:
+    1694/    3F49 : 46 96 3C                      CALL      CI
+    1695/    3F4C : 24 7F                         ANI       7FH
+    1696/    3F4E : C8                            MOV       B,A
+    1697/    3F4F : 46 52 3C                      CALL      CO
+    1698/    3F52 : C1                            MOV       A,B
+    1699/    3F53 : 07                            RET                           ; RETURN
+    1700/    3F54 :                     ;
+    1701/    3F54 :                     ; I/O SYSTEM PHYSICAL DEVICE TABLES
+    1702/    3F54 :                     ; 2 BYTES/ENTRY
+    1703/    3F54 :                     ;   BYTE 0 = IDENTIFYING CHARACTER
+    1704/    3F54 :                     ;   BYTE 1 = DEVICE SELECT BIT PATTERN
+    1705/    3F54 :                     ;
+    1706/    3F54 :                     ICT:
+    1707/    3F54 : 54 00                         DB        'T',CTTY            ; CONSOLE = TTY
+    1708/    3F56 : 43 01                         DB        'C',CCRT            ; CONSOLE = CRT
+    1709/    3F58 : 42 02                         DB        'B',BATCH           ; BATCH MODE CONSOLE = READ,LIST
+    1710/    3F5A : 31 03                         DB        '1',CUSE            ; USER DEFINED CONSOLE DEVICE
+    1711/    3F5C :                     IRT:
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 32 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+    1712/    3F5C : 54 00                         DB        'T',RTTY            ; READER = TTY
+    1713/    3F5E : 50 04                         DB        'P',RPTR            ; READER = PTR
+    1714/    3F60 : 31 08                         DB        '1',RUSE1           ; USER DEFINED READER DEVICE 1
+    1715/    3F62 : 32 0C                         DB        '2',RUSE2           ; USER DEFINED READER DEVICE 2
+    1716/    3F64 :                     OPT:
+    1717/    3F64 : 54 00                         DB        'T',PTTY            ; PUNCH = TTY
+    1718/    3F66 : 50 10                         DB        'P',PPTP            ; PUNCH = PTP
+    1719/    3F68 : 31 20                         DB        '1',PUSE1           ; USER DEFINED PUNCH DEVICE 1
+    1720/    3F6A : 32 30                         DB        '2',PUSE2           ; USER DEFINED PUNCH DEVICE 2
+    1721/    3F6C :                     OLT:
+    1722/    3F6C : 54 00                         DB        'T',LTTY            ; LIST = TTY
+    1723/    3F6E : 43 40                         DB        'C',LCRT            ; LIST = CRT
+    1724/    3F70 : 31 80                         DB        '1',LUSE1           ; USER DEFINED LIST DEVICE 1
+    1725/    3F72 : 32 C0                         DB        '2',LUSE2           ; USER DEFINED LIST DEVICE 2
+    1726/    3F74 :                     ;
+    1727/    3F74 :                     ; END OF PROGRAM
+    1728/    3F74 :                     ;
+    1729/    3F74 :                               END
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 33 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+ ADR1 :                           8 C |  ADR2 :                          0A C |
+ ADR3 :                          0C C |
+*ARCHITECTURE :                                        "i386-unknown-win32" - |
+ AS0 :                         38E4 C |  AS1 :                         38F2 C |
+ AS2 :                         3900 C |  ASSIGN :                      38A3 C |
+ BATCH :                          2 - |  BEGIN :                       3829 C |
+ BIAS :                           8 - |  BLK :                         3C50 C |
+ BN0 :                         3917 C |  BN1 :                         394C C |
+ BNPF :                        390E C |  BYTE :                        3C7F C |
+*CASESENSITIVE :                  0 - |  CBRCH :                          6 C |
+ CCRT :                           1 - |  CI :                          3C96 C |
+ CI0 :                         3CA7 C |  CI1 :                         3CAA C |
+ CI2 :                         3CB9 C |  CILOC :                       3700 - |
+ CM0 :                         3976 C |  CM1 :                         39A2 C |
+ CMSK :                         0FC - |  CN0 :                         3CC8 C |
+ CO :                          3C52 C |  CO0 :                         3C67 C |
+ CO1 :                         3C77 C |  COLOC :                       3703 - |
+ COMP :                        3967 C | *COMPMODE :                       0 - |
+*CONSTPI :        3.141592653589793 - |  CONV :                        3CC1 C |
+ CR :                            0D - |  CRLF :                        3CCC C |
+ CRTBE :                          4 - |  CRTDA :                          1 - |
+ CRTI :                           4 - |  CRTIN :                       3CAF C |
+ CRTO :                          0C - |  CRTOUT :                      3C6C C |
+ CRTS :                           5 - |  CS0 :                         3CE4 C |
+ CS1 :                         3CEA C |  CS2 :                         3CEE C |
+ CS3 :                         3CF2 C |  CSLOC :                       3718 - |
+ CSTS :                        3CD6 C |  CTTY :                           0 - |
+ CUSE :                           3 - | *DATE :                "12/29/2022" - |
+ DC0 :                         3D06 C |  DC1 :                         3D0E C |
+ DC2 :                         3D1D C |  DEBUG :                          0 - |
+ DECODE :                      3CFC C |  DELAY :                       3D25 C |
+ DG0 :                         3D2E C |  DG1 :                         3D3B C |
+ DG2 :                         3D48 C |  DG3 :                         3D50 C |
+ DI0 :                         39AF C |  DI1 :                         39B8 C |
+ DIGIT :                       3D2C C |  DISP :                        39AC C |
+ DL0 :                         3D27 C |  DLY :                           17 - |
+ DSB :                            8 - |  EN0 :                         3D5E C |
+ EN1 :                         3D65 C |  EN2 :                         3D6F C |
+ EN3 :                         3D80 C |  ENB :                            0 - |
+ ENCODE :                      3D55 C |  EOF :                         39D7 C |
+ EX0 :                         3D91 C |  EX1 :                         3D94 C |
+ EX2 :                         3DAE C |  EX3 :                         3DCF C |
+ EXPR :                        3D85 C |  FALSE :                          0 - |
+ FI0 :                         3A0C C |  FILL :                        3A03 C |
+ FIRST :                          0 - |  GETAD :                       3DD4 C |
+ GO :                          3866 C |  GOTO :                        3A16 C |
+*HAS64 :                          0 - |  HEXN :                        3A1D C |
+ HILO :                        3DE2 C |  HPRIME :                         4 C |
+ HXD :                         3DEA C |  ICT :                         3F54 C |
+ INCHL :                       3DF0 C |  INIT :                           0 - |
+ IOBYT :                          3 C |  IOCHK :                       3DF4 C |
+ IOMOD :                       38B1 C |  IOSET :                       3DFA C |
+ IRT :                         3F5C C |  L1LOC :                       3712 - |
+ L2LOC :                       3715 - |  LADR :                        3E00 C |
+ LBYTE :                       3E10 C |  LCRT :                          40 - |
+ LDLY :                          14 - |  LE0 :                         3E22 C |
+ LEAD :                        3E20 C |  LER :                         3C48 C |
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 34 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+ LF :                            0A - | *LISTON :                         1 - |
+ LMSK :                          3F - |  LO :                          3E2C C |
+ LO0 :                         3A4E C |  LOAD :                        3A48 C |
+ LTTY :                           0 - |  LUSE1 :                         80 - |
+ LUSE2 :                        0C0 - |  LVER :                          0B - |
+ M0 :                          3E47 C | *MACEXP :                         7 - |
+ MEMCK :                       3E43 C | *MOMCPU :                     8008E - |
+*MOMCPUNAME :             "8008NEW" - |  MOVE :                        3A62 C |
+ MV0 :                         3A66 C | *NESTMAX :                      100 - |
+ NI0 :                         3E66 C |  NIBBLE :                      3E58 C |
+ NO0 :                         3E72 C |  NOISE :                       3E6A C |
+ NULL :                        3A8E C |  OLT :                         3F6C C |
+ OPT :                         3F64 C |  P1LOC :                       370C - |
+ P2LOC :                       370F - |  PAD :                           0A - |
+ PBITA :                         80 - |  PBYTE :                       3E7B C |
+ PCMD :                           2 - |  PDI :                            2 - |
+ PDO :                           0B - |  PEOL :                        3E95 C |
+ PG0 :                         3EAC C |  PGRM :                        3E9F C |
+ PMSK :                         0CF - |  PO :                          3EB5 C |
+ PO0 :                         3EC4 C |  PO1 :                         3ED3 C |
+ PPTP :                          10 - |  PR0 :                         3AAD C |
+ PR1 :                         3ABD C |  PR2 :                         3ADD C |
+ PR3 :                         3AE3 C |  PR4 :                         3AEA C |
+ PRDY :                          40 - |  PROG :                        3A94 C |
+ PROGO :                         80 - |  PROMC :                          9 - |
+ PRONO :                          0 - |  PTPC :                           9 - |
+ PTPGO :                         0A - |  PTPNO :                          8 - |
+ PTPO :                          0B - |  PTPS :                           1 - |
+ PTRC :                           9 - |  PTRDA :                         20 - |
+ PTRGO :                         0C - |  PTRI :                           3 - |
+ PTRNO :                          8 - |  PTRS :                           1 - |
+ PTTY :                           0 - |  PUSE1 :                         20 - |
+ PUSE2 :                         30 - |  R1LOC :                       3706 - |
+ R2LOC :                       3709 - |  RBIT :                           1 - |
+ RCMD :                           4 - |  READ :                        3AF8 C |
+ RED0 :                        3AFC C |  RED1 :                        3B35 C |
+ RED2 :                        3B5A C | *RELAXED :                        0 - |
+ RI :                          3EDB C |  RI0 :                         3EED C |
+ RI1 :                         3EFA C |  RI2 :                         3EFF C |
+ RI3 :                         3F03 C |  RI4 :                         3F10 C |
+ RI5 :                         3F20 C |  RI6 :                         3F23 C |
+ RIX :                         3F2B C |  RMSK :                         0F3 - |
+ RPTR :                           4 - |  RTTY :                           0 - |
+ RUSE1 :                          8 - |  RUSE2 :                         0C - |
+ SAVIT :                       3F34 C |  SLDE :                        3F42 C |
+ START :                       3844 C |  SU0 :                         3B76 C |
+ SU1 :                         3BAA C |  SUBS :                        3B6A C |
+ TBL :                         3875 C |  TI :                          3F49 C |
+*TIME :                    "9:3:57" - |  TOUT :                         0FA - |
+ TR0 :                         3BC5 C |  TRAN :                        3BB9 C |
+ TRUE :                           1 - |  TTC :                            9 - |
+ TTI :                            0 - |  TTO :                            8 - |
+ TTS :                            1 - |  TTYBE :                          4 - |
+ TTYDA :                          1 - |  TTYGO :                          9 - |
+ TTYIN :                       3CA0 C |  TTYNO :                          8 - |
+ TTYOUT :                      3C5C C |  VER :                           1E - |
+ VERO :                        3835 C |  VERS :                        381E C |
+*VERSION :                     142F - |  WRI0 :                        3BDD C |
+ WRI1 :                        3BF5 C |  WRI2 :                        3BF8 C |
+ WRI3 :                        3C24 C |  WRITE :                       3BDA C |
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 35 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+*Z80SYNTAX :                      0 - |
+
+    233 symbols
+     15 unused symbols
+
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 36 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+  Defined Macros:
+  ---------------
+
+MODIO                                 |
+
+      1 macro
+
+ AS V1.42 Beta [Bld 234] - Source File MON_3_0.asm - Page 37 - 12/29/2022 9:3:57
+ INTELLEC 8/MOD 8 MONITOR, VERSION 3.0, 14 APRIL 1975
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+
+0.03 seconds assembly time
+
+   1730 lines source file
+   1878 lines incl. macro expansions
+      2 passes
+      0 errors
+      0 warnings

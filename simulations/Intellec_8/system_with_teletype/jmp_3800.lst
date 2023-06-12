@@ -1,0 +1,42 @@
+ AS V1.42 Beta [Bld 234] - Source File jmp_3800.asm - Page 1 - 12/29/2022 8:53:34
+
+
+       1/       0 :                             ORG       0
+       2/       0 :                     
+       3/       0 : 44 00 38            		JMP		3800H
+       4/       3 :                     
+ AS V1.42 Beta [Bld 234] - Source File jmp_3800.asm - Page 2 - 12/29/2022 8:53:34
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+*ARCHITECTURE :                                        "i386-unknown-win32" - |
+*CASESENSITIVE :                  0 - | *COMPMODE :                       0 - |
+*CONSTPI :        3.141592653589793 - | *DATE :                "12/29/2022" - |
+*FALSE :                          0 - | *HAS64 :                          0 - |
+*LISTON :                         1 - | *MACEXP :                         7 - |
+*MOMCPU :                     8008E - | *MOMCPUNAME :             "8008NEW" - |
+*NESTMAX :                      100 - | *RELAXED :                        0 - |
+*TIME :                   "8:53:34" - | *TRUE :                           1 - |
+*VERSION :                     142F - | *Z80SYNTAX :                      0 - |
+
+     17 symbols
+     17 unused symbols
+
+ AS V1.42 Beta [Bld 234] - Source File jmp_3800.asm - Page 3 - 12/29/2022 8:53:34
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+
+0.00 seconds assembly time
+
+      4 lines source file
+      1 pass
+      0 errors
+      0 warnings

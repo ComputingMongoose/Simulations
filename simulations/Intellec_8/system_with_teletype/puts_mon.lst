@@ -1,0 +1,79 @@
+ AS V1.42 Beta [Bld 234] - Source File puts_mon.asm - Page 1 - 1/1/2023 9:27:50
+
+
+       1/       0 : =0DH                 CR        EQU       0DH                 ; ASCII VALUE OF CARRIAGE RETURN
+       2/       0 : =0AH                 LF        EQU       0AH                 ; ASCII VALUE OF LINE FEED
+       3/       0 :                     
+       4/       0 : =3809H               CO        EQU       3809H               ; Monitor provided routine
+       5/       0 :                               
+       6/     100 :                               ORG       100H
+       7/     100 :                     
+       8/     100 : 2E 01 36 0F                   LXI       H,S1
+       9/     104 : 46 29 01                      CALL      PUTS
+      10/     107 : 2E 01 36 1C                   LXI       H,S2
+      11/     10B : 46 29 01                      CALL      PUTS
+      12/     10E : 00                            HLT
+      13/     10F :                     
+      14/     10F : 53 54 52 49 4E 47   S1:       DB        'STRING ONE',CR,LF,0
+              115 : 20 4F 4E 45 0D 0A 
+              11B : 00                
+      15/     11C : 53 54 52 49 4E 47   S2:       DB        'STRING TWO',CR,LF,0
+              122 : 20 54 57 4F 0D 0A 
+              128 : 00                
+      16/     129 :                     
+      17/     129 :                     ; Input: HL=null terminated string
+      18/     129 :                     PUTS:
+      19/     129 : C7                            MOV       A,M
+      20/     12A : B0                            ORA       A
+      21/     12B : 68 3E 01                      JZ        PUTSE
+      22/     12E : C8                            MOV       B,A
+      23/     12F : DD                            MOV       D,H
+      24/     130 : E6                            MOV       E,L
+      25/     131 : 46 09 38                      CALL      CO
+      26/     134 : EB                            MOV       H,D
+      27/     135 : F4                            MOV       L,E
+      28/     136 : 30                            INR       L
+      29/     137 : 40 29 01                      JNC       PUTS
+      30/     13A : 28                            INR       H
+      31/     13B : 44 29 01                      JMP       PUTS
+      32/     13E :                     PUTSE:
+      33/     13E : 07                            RET
+ AS V1.42 Beta [Bld 234] - Source File puts_mon.asm - Page 2 - 1/1/2023 9:27:50
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+*ARCHITECTURE :                                        "i386-unknown-win32" - |
+*CASESENSITIVE :                  0 - |  CO :                          3809 - |
+*COMPMODE :                       0 - | *CONSTPI :        3.141592653589793 - |
+ CR :                            0D - | *DATE :                  "1/1/2023" - |
+*FALSE :                          0 - | *HAS64 :                          0 - |
+ LF :                            0A - | *LISTON :                         1 - |
+*MACEXP :                         7 - | *MOMCPU :                     8008E - |
+*MOMCPUNAME :             "8008NEW" - | *NESTMAX :                      100 - |
+ PUTS :                         129 C |  PUTSE :                        13E C |
+*RELAXED :                        0 - |  S1 :                           10F C |
+ S2 :                           11C C | *TIME :                   "9:27:50" - |
+*TRUE :                           1 - | *VERSION :                     142F - |
+*Z80SYNTAX :                      0 - |
+
+     24 symbols
+     17 unused symbols
+
+ AS V1.42 Beta [Bld 234] - Source File puts_mon.asm - Page 3 - 1/1/2023 9:27:50
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+
+0.00 seconds assembly time
+
+     33 lines source file
+      2 passes
+      0 errors
+      0 warnings

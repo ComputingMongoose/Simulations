@@ -1,0 +1,92 @@
+{
+
+"name":"Intellec 8",
+"maximum_steps":0,
+"delay_between_steps_ms":0,
+"delay_between_steps_ns":130000,
+
+"devices":[
+	{
+		"name":"SimulationControl",
+		"type":"SimulationControl",
+		"configuration":[]
+	},
+	{
+		"name":"FrontPanel",
+		"type":"Intellec_8_frontpanel",
+		"configuration":[]
+	},
+	{
+		"name":"ASR33",
+		"type":"ASR33Teletype",
+		"configuration":[
+			{"key":"uart","value":1},
+			{"key":"uart_receive_complement","value":1},
+			{"key":"uart_send_complement","value":1},
+			{"key":"tape_in","value":"puts_mon.hex"}
+		]
+	},
+	{
+		"name":"CPU",
+		"type":"Intel8008",
+		"configuration":[]
+	},
+	{
+		"name":"ROM",
+		"type":"ROMW8D8",
+		"configuration":[
+			{"key":"size", "value":4096},
+			{"key":"initialization_policy", "value":"ZERO"},
+			{"key":"load_hex", "value":"MON_3_0.hex"},
+			{"key":"load_hex_offset", "value":14336},
+			{"key":"invert_nibbles", "value":0}
+		]
+	},
+	{
+		"name":"RAM",
+		"type":"MemoryW8D8",
+		"configuration":[
+			{"key":"size", "value":14336},
+			{"key":"initialization_policy", "value":"ZERO"},
+			{"key":"load_hex", "value":"jmp_3800.hex"}
+		]
+	},
+	{
+		"name":"MemoryBUS",
+		"type":"DataBusNoError",
+		"configuration":[]
+	},
+	{
+		"name":"IOBUS",
+		"type":"DataBusNoError",
+		"configuration":[]
+	},
+	{
+		"name":"ControlBUS",
+		"type":"ControlBusBasic",
+		"configuration":[
+			{"key":"signals", "value":"INT,S0,S1,S2"}
+		]
+	}
+	
+],
+
+"connections":[
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"ROM", "start":14336,"end":18432,"offset":14336},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"RAM", "start":0,"end":14335,"offset":0},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"MemoryBUS"},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"IOBUS"},
+	{"type":"attachToControlBus", "src":"CPU", "dev":"ControlBUS"},
+	{"type":"attachToDataBus", "src":"FrontPanel", "dev":"MemoryBUS"},
+	{"type":"attachToControlBus", "src":"FrontPanel", "dev":"ControlBUS"},
+	{"type":"attachGenericDevice", "src":"FrontPanel", "dev":"CPU"},
+	
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":0,"end":0,"offset":0,"comment":"Input port"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":1,"end":1,"offset":0,"comment":"Input Status port"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":8,"end":8,"offset":8,"comment":"Output port (write characters)"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ASR33", "start":9,"end":9,"offset":8,"comment":"Control port (select tty/tape)"}
+
+]
+
+
+}
