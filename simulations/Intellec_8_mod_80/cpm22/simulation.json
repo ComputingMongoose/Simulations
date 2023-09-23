@@ -1,0 +1,142 @@
+{
+
+"name":"MDS 80 booting CP/M 2.2",
+"maximum_steps":0,
+"delay_between_steps_ms":0,
+"delay_between_steps_ns":5000,
+"onCPUInvalidOpcodeException":"SUSPEND",
+
+"devices":[
+	{
+		"name":"SimulationControl",
+		"type":"SimulationControl",
+		"configuration":[]
+	},
+	{
+		"name":"FrontPanel",
+		"type":"MDS230_frontpanel",
+		"configuration":[]
+	},
+	{
+		"name":"FloppyDrives",
+		"type":"MDS230_x2_FloppyDrives",
+		"configuration":[
+			{"key":"enable_load_disk","value":1},
+			{"key":"load_disk_0","value":"CPM22DRI.IMD","comment":""},
+			{"key":"use_overlay_0","value":1},
+			{"key":"use_overlay_1","value":1},
+			{"key":"debug","value":0}
+		]
+	},
+	{
+		"name":"FloppyDiskController",
+		"type":"FloppyDiskController",
+		"configuration":[
+			{"key":"debug","value":0}
+		]
+	},
+	
+	{
+		"name":"CPU",
+		"type":"Intel8080",
+		"configuration":[
+		]
+	},
+	{
+		"name":"ROM",
+		"type":"ROMW8D8",
+		"configuration":[
+			{"key":"size", "value":6144},
+			{"key":"initialization_policy", "value":"ZERO"},
+			{"key":"load_hex", "value":"monIIv13_diagIIv13_as.hex"},
+			{"key":"load_hex_offset", "value":59392}
+		]
+	},
+	{
+		"name":"RAM",
+		"type":"MemoryW8D8",
+		"configuration":[
+			{"key":"size", "value":63488},
+			{"key":"initialization_policy", "value":"ZERO"},
+			{"key":"load_hex", "value":"jmp_E800.hex"}
+		]
+	},
+	{
+		"name":"MemoryBUS",
+		"type":"DataBusNoError",
+		"configuration":[
+			{"key":"log_misses","value":1}
+		]
+	},
+	{
+		"name":"IOBUS",
+		"type":"DataBusNoError",
+		"configuration":[{"key":"log_misses","value":0}]
+	},
+	{
+		"name":"ControlBUS",
+		"type":"ControlBusBasic",
+		"configuration":[
+			{"key":"signals", "value":"INT,S0,S1,S2"}
+		]
+	},
+	{
+		"name":"ControlPort",
+		"type":"Intellec2ControlPort",
+		"configuration":[
+			{"key":"connection_boot_rom","value":"bootrom"},
+			{"key":"connection_boot_ram","value":"bootram"}
+		]
+	},
+	{
+		"name":"IOC",
+		"type":"Intellec2IOC",
+		"configuration":[
+		]
+	},
+	{
+		"name":"Terminal",
+		"type":"GenericTerminal",
+		"configuration":[
+			{"key":"num_lines","value":25},
+			{"key":"uart","value":1},
+			{"key":"uart_receive_complement","value":0},
+			{"key":"uart_send_complement","value":0},
+			{"key":"uart_status_data_send_ready_bit","value":1},
+			{"key":"enable_ansi","value":1},
+			{"key":"enable_kb_lock","value":0}
+		]
+	}
+	
+],
+
+"connections":[
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"ROM", "start":59392,"end":61439,"offset":59392, "name":"bootrom", "enabled":true},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"ROM", "start":63488,"end":65535,"offset":59392, "name":"MonitorROM"},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"RAM", "start":0,"end":59391,"offset":0},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"RAM", "start":59392,"end":61439,"offset":0, "name":"bootram", "enabled":false},
+	{"type":"attachDataDevice", "src":"MemoryBUS", "dev":"RAM", "start":61440,"end":63487,"offset":0},
+	
+	{"type":"attachToDataBus", "src":"CPU", "dev":"MemoryBUS"},
+	{"type":"attachToDataBus", "src":"CPU", "dev":"IOBUS"},
+	{"type":"attachToControlBus", "src":"CPU", "dev":"ControlBUS"},
+
+	{"type":"attachToControlBus", "src":"FrontPanel", "dev":"ControlBUS"},
+	{"type":"attachGenericDevice", "src":"FrontPanel", "dev":"CPU"},
+	
+	{"type":"attachDiskDrive","src":"FloppyDiskController","dev":"FloppyDrives:0"},
+	{"type":"attachDiskDrive","src":"FloppyDiskController","dev":"FloppyDrives:1"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"FloppyDiskController", "start":120,"end":124,"offset":120,"comment":"DSTS,DMALO,DMAHI,RSTS"},
+	{"type":"attachToDataBus", "src":"FloppyDiskController", "dev":"MemoryBUS"},
+	
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"Terminal", "start":244,"end":244,"offset":244,"comment":"Input/Output port"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"Terminal", "start":245,"end":245,"offset":244,"comment":"Input Status port"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"ControlPort", "start":255,"end":255,"offset":255,"comment":"Control port"},
+	{"type":"attachDataDevice", "src":"IOBUS", "dev":"IOC", "start":192,"end":193,"offset":192,"comment":"I/O Controller"},
+
+	{"type":"attachToDataBus", "src":"ControlPort", "dev":"MemoryBUS"}
+
+]
+
+
+}
