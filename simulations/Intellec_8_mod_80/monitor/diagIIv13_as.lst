@@ -1,0 +1,1203 @@
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 1 - 6/17/2023 15:9:31
+MESSAGES
+
+
+       1/       0 :                     ; Changes for assembling with MacroAssembler AS 1.42Beta
+       2/       0 :                     ; - remove "$" before TITLE
+       3/       0 :                     ; - change NOT with ~
+       4/       0 :                     ; - replace OR with |
+       5/       0 :                     ; - replace NOT INT7 with NOTINT7 and manually create the symbol
+       6/       0 :                     ;
+       7/       0 :                     ; change MONCHK to 2B instead of 1E
+       8/       0 :                     ; change BOOSUM to 32 instead of A3
+       9/       0 :                     ;
+      10/       0 :                     		;$       TITLE    ('INTELLEC SERIES II IPB DIAGNOSTIC')
+      11/       0 :                     		       TITLE    "INTELLEC SERIES II IPB DIAGNOSTIC"
+      12/       0 :                     		
+      13/       0 :                     		;       EQUATES
+      14/       0 :                     		
+      15/       0 :                     		;       CHECKSUM DEFINITIONS
+      16/       0 :                     		
+      17/       0 : =0F800H              MONORG  EQU     0F800H          ;MONITOR ROM ORIGIN
+      18/       0 : =800H                MONLEN  EQU     0800H           ;MONITOR ROM LENGTH
+      19/       0 : =2BH                 MONCHK  EQU     02BH            ;MONITOR ROM CHECKSUM
+      20/       0 :                     		
+      21/       0 : =0E800H              BOOORG  EQU     0E800H          ;BOOT ROM ORIGIN     
+      22/       0 : =800H                BOOLEN  EQU     0800H           ;BOOT ROM LENGTH    
+      23/       0 : =55H                 BOOCHK  EQU     055H            ;BOOT ROM CHECKSUM     
+      24/       0 : =88H                 BOOSUM  EQU     088H            ;BOOT ROM CHECKSUM BYTE CONTENTS (TO MAKE 55H)
+      25/       0 :                     		
+      26/       0 :                     		;       GENERAL DEFINITIONS
+      27/       0 :                     		
+      28/       0 : =0DH                 CR      EQU     0DH             ;CARRIAGE RETURN CHARACTER
+      29/       0 : =0AH                 LF      EQU     0AH             ;LINE FEED CHARACTER
+      30/       0 : =38H                 INT7V   EQU     038H            ;INTERRUPT 7 VECTOR LOCATION
+      31/       0 :                     		
+      32/       0 :                     		;       PIC DEFINITIONS
+      33/       0 :                     		
+      34/       0 : =0FCH                SPICMR  EQU     0FCH            ;SYSTEM PIC MASK REGISTER
+      35/       0 : =0FAH                IPICMR  EQU     0FAH            ;IO PIC MASK REGISTER
+      36/       0 : =0FDH                SPICCR  EQU     0FDH            ;SYSTEM PIC COMMAND REGISTER
+      37/       0 : =0FBH                IPICCR  EQU     0FBH            ;IO PIC COMMAND REGISTER
+      38/       0 : =20H                 EOI     EQU     20H             ;END OF INTERRUPT COMMAND
+      39/       0 : =0CH                 POLL    EQU     0CH             ;POLL COMMAND
+      40/       0 :                     		
+      41/       0 :                     		;       IOC AND PIO COMMAND DEFFINITIONS
+      42/       0 :                     		
+      43/       0 : =8H                  CSMEM   EQU     01000B          ;CHECKSUM MEMORY COMMAND
+      44/       0 : =7H                  DECHO   EQU     00111B          ;DATA ECHO COMMAND
+      45/       0 : =6H                  SRQ     EQU     00110B          ;GENERATE INTERRUPT COMMAND
+      46/       0 : =5H                  SRQACK  EQU     00101B          ;INTERRUPT ACKNOWLEDGE COMMAND
+      47/       0 : =9H                  TRAM    EQU     01001B          ;TEST RAM COMMAND
+      48/       0 :                     		
+      49/       0 :                     		;       THINGS ALREADY DEFINED IN THE MONITOR
+      50/       0 :                     		
+      51/       0 : =1H                  OBF     EQU     00000001B       ;SLAVE OUTPUT BUFFER IS FULL
+      52/       0 : =2H                  IBF     EQU     00000010B       ;SLAVE INPUT BUFFER IS FULL
+      53/       0 : =4H                  F0      EQU     00000100B       ;FLAG 0 - SAVE BUSY, MASTER LOCKED OUT
+      54/       0 :                     		
+      55/       0 : =0C0H                IOCI    EQU     0C0H            ;IOC INPUT DATA (FROM DBB) PORT
+      56/       0 : =0C0H                IOCO    EQU     0C0H            ;IOC OUTPUT DATA (TO DBB) PORT
+      57/       0 : =0C1H                IOCS    EQU     0C1H            ;IOC STATUS PORT
+      58/       0 : =0C1H                IOCC    EQU     0C1H            ;IOC COMMAND PORT
+      59/       0 :                     		
+      60/       0 : =0F8H                PIOI    EQU     0F8H            ;PIO INPUT DATA (FROM DBB) PORT
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 2 - 6/17/2023 15:9:31
+INTELLEC SERIES II IPB DIAGNOSTIC
+
+
+      61/       0 : =0F8H                PIOO    EQU     0F8H            ;PIO OUTPUT DATA (TO DBB) PORT
+      62/       0 : =0F9H                PIOS    EQU     0F9H            ;PIO STATUS PORT
+      63/       0 : =0F9H                PIOC    EQU     0F9H            ;PIO COMMAND PORT
+      64/       0 :                     		
+      65/       0 : =20H                 INT5    EQU     00100000B       ;INTERRUPT LEVEL 5
+      66/       0 : =40H                 INT6    EQU     01000000B       ;INTERRUPT LEVEL 6
+      67/       0 : =80H                 INT7    EQU     10000000B       ;INTERRUPT LEVEL 7
+      68/       0 : =7FH                 NOTINT7    EQU     01111111B       ;INTERRUPT LEVEL 7
+      69/       0 :                     		
+      70/       0 : =0F809H              CO      EQU     0F809H          ;CO MONITOR FUNCTION
+      71/       0 : =0F81BH              MEMCHK  EQU     0F81BH          ;MEMCHK MONITOR FUNCTION
+      72/       0 :                     		
+      73/       0 :                     		;       GLOBALS
+      74/       0 :                     		
+      75/       0 : =10H                 FFLAG   EQU     010H            ;MAJOR TEST FAILURE FLAG
+      76/       0 :                     		                                ;   0 = NO FAILURES IN TEST
+      77/       0 :                     		                                ;   0FFH = TEST HAS FAILED
+      78/       0 : =11H                 TOFLAG  EQU     011H            ;TIMEOUT FLAG
+      79/       0 :                     		                                ;   0 = NO TIMEOUT
+      80/       0 :                     		                                ;   0FFH = TIMEOUT HAS OCCURRED
+      81/       0 :                     		
+      82/       0 :                     		;       ENTRY POINTS
+      83/       0 :                     		
+      84/    EB00 :                             ORG     0EB00H          ;BEGINNING OF DIAGNOSTIC
+      85/    EB00 : C3 24 EB                    JMP     MIMODE          ;MONITOR'S ENTRY POINT
+      86/    EB03 : C3 06 EB                    JMP     BIMODE          ;BOOT ENTRY POINT
+      87/    EB06 :                     		
+      88/    EB06 :                     		;$ EJECT
+      89/    EB06 :                     		;;;     BIMODE - BOOT INVOKED MODE CONTROL ROUTINE
+      90/    EB06 :                     		
+      91/    EB06 : CD 71 ED            BIMODE: CALL    INIT            ;SAVE ENVIRONMENT
+      92/    EB09 : CD 67 EB                    CALL    CHKSUM          ;CHECKSUM ROMS
+      93/    EB0C :                     		
+      94/    EB0C : 0E 55                       MVI     C,55H           ;CHECK FOR IOC PRESENCE
+      95/    EB0E : CD E6 EB                    CALL    IOCDRA
+      96/    EB11 : 21 11 00                    LXI     H,TOFLAG        ;TEST TIME OUT FLAG
+      97/    EB14 : B6                  	        ORA     M               ;AND RESULT FLAG
+      98/    EB15 : CC 9F EB                    CZ      IOCTST          ;RUN THE IOC TEST IF IOC PRESENT
+      99/    EB18 : 3E 00                       MVI     A,0             ;RESET TIMEOUT FLAG
+     100/    EB1A : 32 11 00                    STA     TOFLAG
+     101/    EB1D :                     		
+     102/    EB1D : CD 2D EC                    CALL    PIOTST          ;RUN THE PIO TEST
+     103/    EB20 :                     		
+     104/    EB20 : CD A8 ED                    CALL    RESTOR          ;RESTORE THE ENVIRONMENT
+     105/    EB23 : C9                  	        RET                     ;RETURN TO THE BOOT
+     106/    EB24 :                     		
+     107/    EB24 :                     		;;;     MIMODE - MONITOR INVOKED MODE CONTROL ROUTINE
+     108/    EB24 :                     		
+     109/    EB24 : CD 71 ED            MIMODE: CALL    INIT            ;SAVE ENVIRONMENT
+     110/    EB27 : 01 4C EE                    LXI     B,SIGNON        ;PRINT SIGN ON MESSAGE
+     111/    EB2A : CD 9E ED                    CALL    PRINTL
+     112/    EB2D :                     		
+     113/    EB2D :                     		;       CHECKSUM ROMS
+     114/    EB2D :                     		
+     115/    EB2D : 01 80 EE                    LXI     B,MIMI          ;'CHECKSUM TEST' MESSAGE
+     116/    EB30 : CD BF ED                    CALL    SETUP           ;PRINT MESSAGE AND INITIALIZE FFLAG
+     117/    EB33 : CD 67 EB                    CALL    CHKSUM          ;CHECKSUM ROMS
+     118/    EB36 : CD 5A ED                    CALL    FINISH          ;CHECK FFLAG
+     119/    EB39 :                     		
+     120/    EB39 :                     		;       TEST IOC
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 3 - 6/17/2023 15:9:31
+INTELLEC SERIES II IPB DIAGNOSTIC
+
+
+     121/    EB39 :                     		
+     122/    EB39 : 01 8A EE                    LXI     B,MIM2          ;'IOC TEST' MESSAGE
+     123/    EB3C : CD BF ED                    CALL    SETUP           ;PRINT MESSAGE AND INITIALIZE FFLAG
+     124/    EB3F : CD 9F EB                    CALL    IOCTST          ;TEST IOC
+     125/    EB42 : CD 5A ED                    CALL    FINISH          ;CHECK FFLAG
+     126/    EB45 :                     		
+     127/    EB45 :                     		;       TEST PIO
+     128/    EB45 :                     		
+     129/    EB45 : 01 8E EE                    LXI     B,MIM3          ;'PIO TEST' MESSAGE
+     130/    EB48 : CD BF ED                    CALL    SETUP           ;PRINT MESSAGE AND INITIALIZE FFLAG
+     131/    EB4B : CD 2D EC                    CALL    PIOTST          ;TEST PIO
+     132/    EB4E : CD 5A ED                    CALL    FINISH          ;CHECK FFLAG
+     133/    EB51 :                     		
+     134/    EB51 :                     		;       TEST RAM
+     135/    EB51 :                     		
+     136/    EB51 : 01 92 EE                    LXI     B,MIM4          ;'RAM TEST' MESSAGE
+     137/    EB54 : CD BF ED                    CALL    SETUP           ;PRINT MESSAGE AND INITIALIZE FFLAG
+     138/    EB57 : CD BB EC                    CALL    RAMTST          ;TEST RAM
+     139/    EB5A : CD 5A ED                    CALL    FINISH          ;CHECK FFLAG
+     140/    EB5D :                     		
+     141/    EB5D :                     		;       RETURN TO MONITOR
+     142/    EB5D :                     		
+     143/    EB5D : 01 71 EE                    LXI     B,SGNOFF        ;SIGNOFF MESSAGE
+     144/    EB60 : CD 9E ED                    CALL    PRINTL
+     145/    EB63 : CD A8 ED                    CALL    RESTOR          ;RESTORE ENVIRONMENT
+     146/    EB66 : C9                  	        RET                     ;RETURN TO MONITOR
+     147/    EB67 :                     		
+     148/    EB67 :                     		;$       TITLE   ('CHKSUM - CHECKSUM TEST')
+     149/    EB67 :                     		        TITLE   "CHKSUM - CHECKSUM TEST"
+     150/    EB67 :                     		;$       EJECT
+     151/    EB67 :                     		;;;     CHKSUM - CHECKSUM ROMS
+     152/    EB67 :                     		
+     153/    EB67 :                     		CHKSUM:
+     154/    EB67 : 21 00 F8                    LXI     H,MONORG        ;SET UP TO CHECKSUM MONITOR
+     155/    EB6A : 11 00 08                    LXI     D,MONLEN
+     156/    EB6D : 3E 2B                       MVI     A,MONCHK
+     157/    EB6F : CD 8A EB                    CALL    SUM             ;CHECKSUM MONITOR
+     158/    EB72 : 01 96 EE                    LXI     B,CHKM1         ;'MONITOR CHECKSUM' MESSAGE
+     159/    EB75 : CD DB ED                    CALL    TEST
+     160/    EB78 :                     		
+     161/    EB78 : 21 00 E8                    LXI     H,BOOORG        ;SET UP TO CHECKSUM BOOT
+     162/    EB7B : 11 00 08                    LXI     D,BOOLEN
+     163/    EB7E : 3E 55                       MVI     A,BOOCHK
+     164/    EB80 : CD 8A EB                    CALL    SUM             ;CHECKSUM BOOT
+     165/    EB83 : 01 A7 EE                    LXI     B,CHKM2         ;'BOOT CHECKSUM' MESSAGE
+     166/    EB86 : CD DB ED                    CALL    TEST
+     167/    EB89 : C9                  	        RET
+     168/    EB8A :                     		
+     169/    EB8A :                     		;;;     SUM - CHECKSUM MEMORY
+     170/    EB8A :                     		;
+     171/    EB8A :                     		;       PARAMETERS:
+     172/    EB8A :                     		;           HL = ORIGIN OF ROM TO BE CHECKSUMMED
+     173/    EB8A :                     		;           DE = LENGTH OF ROM
+     174/    EB8A :                     		;           A = EXPECTED CHECKSUM
+     175/    EB8A :                     		;
+     176/    EB8A :                     		;       RETURNS:
+     177/    EB8A :                     		;           A = SUCCESS FLAG
+     178/    EB8A :                     		;               0 = CHECKSUM OK
+     179/    EB8A :                     		;               0FFH = CHECKSUM FAILED
+     180/    EB8A :                     		
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 4 - 6/17/2023 15:9:31
+CHKSUM - CHECKSUM TEST
+
+
+     181/    EB8A : 2F                  	SUM:    CMA                     ;TAKE TWO'S COMPLEMENT OF EXPECTED CHECKSUM, SO
+     182/    EB8B : 3C                  	        INR     A               ;WHEN ADDED TO CHECKSUM THE TOTAL WILL BE ZERO
+     183/    EB8C :                     		
+     184/    EB8C : 47                  	SUM1:   MOV     B,A             ;SAVE SUM DURING TEST
+     185/    EB8D : 7B                  	        MOV     A,E             ;TEST FOR NONE LEFT
+     186/    EB8E : B2                  	        ORA     D
+     187/    EB8F : CA 99 EB                    JZ      SUM2            ;IF NONE LEFT
+     188/    EB92 : 78                  	        MOV     A,B             ;PUT COUNT BACK
+     189/    EB93 : 86                  	        ADD     M               ;ACCUMULATE SUM
+     190/    EB94 : 23                  	        INX     H               ;STEP TO NEXT WORD
+     191/    EB95 : 1B                  	        DCX     D               ;DECREMENT COUNT
+     192/    EB96 : C3 8C EB                    JMP     SUM1            ;LOOP
+     193/    EB99 :                     		SUM2:
+     194/    EB99 : 78                  	        MOV     A,B             ;GET SUM
+     195/    EB9A : B7                  	        ORA     A               ;TEST FOR ZERO SUM
+     196/    EB9B : C8                  	        RZ                      ;IF ZERO, RETURN SUCCESS
+     197/    EB9C :                     		
+     198/    EB9C : 3E FF                       MVI     A,0FFH          ;RETURN FAILURE
+     199/    EB9E : C9                  	        RET
+     200/    EB9F :                     		
+     201/    EB9F :                     		;$       TITLE   ('IOCTST - IOC TEST')
+     202/    EB9F :                     		       TITLE   "IOCTST - IOC TEST"
+     203/    EB9F :                     		;$       EJECT
+     204/    EB9F :                     		;;;     IOCTST - IOC TEST
+     205/    EB9F :                     		
+     206/    EB9F :                     		IOCTST:
+     207/    EB9F :                     		
+     208/    EB9F :                     		;       ECHO TEST
+     209/    EB9F :                     		
+     210/    EB9F : 0E 55                       MVI     C,55H           ;TRY TO ECHO A 55H
+     211/    EBA1 : CD E6 EB                    CALL    IOCDRA
+     212/    EBA4 : 21 11 00                    LXI     H,TOFLAG        ;TEST THE RESULT AND TIME-OUT FLAGS
+     213/    EBA7 : B6                  	        ORA     M
+     214/    EBA8 : CA B2 EB                    JZ      IOC1            ;JUMP IF OK
+     215/    EBAB : 01 B5 EE                    LXI     B,IOCM1         ;FAILURE MESSAGE
+     216/    EBAE : CD DB ED                    CALL    TEST
+     217/    EBB1 : C9                  	        RET                     ;DO NOT DO OTHER TESTS IF NOT PRESENT
+     218/    EBB2 :                     		
+     219/    EBB2 :                     		;       IOC CHECKSUM TEST
+     220/    EBB2 :                     		
+     221/    EBB2 : 06 08               IOC1:   MVI     B,CSMEM         ;CHECKSUM COMMAND
+     222/    EBB4 : CD F7 EB                    CALL    IOCDRB
+     223/    EBB7 : 01 D2 EE                    LXI     B,IOCM2
+     224/    EBBA : CD DB ED                    CALL    TEST
+     225/    EBBD :                     		
+     226/    EBBD :                     		;       IOC RAM TEST
+     227/    EBBD :                     		
+     228/    EBBD : 06 09                       MVI     B,TRAM          ;TEST RAM COMMAND
+     229/    EBBF : CD F7 EB                    CALL    IOCDRB
+     230/    EBC2 : 01 DF EE                    LXI     B,IOCM3
+     231/    EBC5 : CD DB ED                    CALL    TEST
+     232/    EBC8 :                     		
+     233/    EBC8 :                     		;       IOC INTERRUPT TEST
+     234/    EBC8 :                     		
+     235/    EBC8 : 0E BF                       MVI     C,~ INT6      ;SET UP MASKS
+     236/    EBCA : CD 40 EE                    CALL    SETINT
+     237/    EBCD : 06 06                       MVI     B,SRQ           ;TURN ON IOC INTERRUPT
+     238/    EBCF : CD FE EB                    CALL    IOCDRC
+     239/    EBD2 : CD 13 EE                    CALL    CHKINT          ;CHECK INTERRUPTS
+     240/    EBD5 : F5                  	        PUSH    PSW             ;SAVE RESULT
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 5 - 6/17/2023 15:9:31
+IOCTST - IOC TEST
+
+
+     241/    EBD6 : 06 05                       MVI     B,SRQACK        ;RESET IOC INTERRUPT
+     242/    EBD8 : CD FE EB                    CALL    IOCDRC
+     243/    EBDB : CD 2E EE                    CALL    RESET           ;RESTORE INTERRRUPTS TO NORMAL
+     244/    EBDE :                     		
+     245/    EBDE : F1                  	        POP     PSW             ;GET RESULT FLAG
+     246/    EBDF : 01 E7 EE                    LXI     B,IOCM4         ;LOAD MESSAGE POINTER
+     247/    EBE2 : CD DB ED                    CALL    TEST
+     248/    EBE5 : C9                  	        RET
+     249/    EBE6 :                     		
+     250/    EBE6 :                     		;;;     IOCDRA - ECHO TEST DRIVER
+     251/    EBE6 :                     		;
+     252/    EBE6 :                     		;       IOCDRA RUNS AN ECHO TEST WITH THE VALUE SUPPLIED, AND RETURNS THE
+     253/    EBE6 :                     		;       SUCCESS FLAG IN A.
+     254/    EBE6 :                     		;
+     255/    EBE6 :                     		;       PARAMETER:
+     256/    EBE6 :                     		;           C = DATA TO BE ECHOED
+     257/    EBE6 :                     		;
+     258/    EBE6 :                     		;       RETURNS:
+     259/    EBE6 :                     		;           A = SUCCESS FLAG
+     260/    EBE6 :                     		;               0 = PASSED
+     261/    EBE6 :                     		;               0FFH - FAILED
+     262/    EBE6 :                     		;
+     263/    EBE6 :                     		;       CALLS:
+     264/    EBE6 :                     		;           IOCCOD
+     265/    EBE6 :                     		;           IOCDID
+     266/    EBE6 :                     		;           IOCDOD
+     267/    EBE6 :                     		
+     268/    EBE6 : 06 07               IOCDRA: MVI     B,DECHO         ;PUT OUT DATA ECHO COMMAND
+     269/    EBE8 : CD FE EB                    CALL    IOCCOD
+     270/    EBEB : CD 0F EC                    CALL    IOCDOD
+     271/    EBEE : CD 07 EC                    CALL    IOCDID          ;READ BACK DATA
+     272/    EBF1 : 2F                  	        CMA                     ;RETURNS COMPLEMENT
+     273/    EBF2 : 91                  	        SUB     C               ;CHECK IF ECHO EQUALS ORIGINAL
+     274/    EBF3 : C8                  	        RZ                      ;RETURN IF OK
+     275/    EBF4 : 3E FF                       MVI     A,0FFH          ;OTHERWISE, RETURN FAILURE
+     276/    EBF6 : C9                  	        RET
+     277/    EBF7 :                     		
+     278/    EBF7 :                     		;;;     IOCDRB - ISSUE COMMAND AND READ DATA
+     279/    EBF7 :                     		;
+     280/    EBF7 :                     		;       PARAMETER:
+     281/    EBF7 :                     		;           B = COMMAND
+     282/    EBF7 :                     		;
+     283/    EBF7 :                     		;       RETURNS:
+     284/    EBF7 :                     		;           A = DATA
+     285/    EBF7 :                     		;
+     286/    EBF7 :                     		;       CALLS:
+     287/    EBF7 :                     		;           IOCCOD
+     288/    EBF7 :                     		;           IOCDID
+     289/    EBF7 :                     		
+     290/    EBF7 : CD FE EB            IOCDRB: CALL    IOCCOD          ;PUT OUT COMMAND
+     291/    EBFA : CD 07 EC                    CALL    IOCDID          ;READ DATA
+     292/    EBFD : C9                  	        RET
+     293/    EBFE :                     		
+     294/    EBFE :                     		;;;     IOCDRC - ISSUE COMMAND
+     295/    EBFE :                     		;
+     296/    EBFE :                     		;       PARAMETER:
+     297/    EBFE :                     		;           B = COMMAND
+     298/    EBFE :                     		;
+     299/    EBFE :                     		;       CALLS:
+     300/    EBFE :                     		;           IOCCOD
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 6 - 6/17/2023 15:9:31
+IOCTST - IOC TEST
+
+
+     301/    EBFE :                     		
+     302/    EBFE :                     		;IOCDRC  EQU     IOCCOD          ;THIS IS JUST THE COMMAND OUT DRIVER
+     303/    EBFE :                     		                                ;NOTE: ACTUAL DEFINITION FOLLOWS IOCCOD
+     304/    EBFE :                     		
+     305/    EBFE :                     		;;;     IOCCOD - IOC COMMAND OUT DRIVER
+     306/    EBFE :                     		;
+     307/    EBFE :                     		;       PARAMETER:
+     308/    EBFE :                     		;           B = COMMAND
+     309/    EBFE :                     		;
+     310/    EBFE :                     		;       MODIFIES A,B,E,HL
+     311/    EBFE :                     		
+     312/    EBFE : 1E 00               IOCCOD: MVI     E,0             ;TEST FOR ZERO STATUS
+     313/    EC00 : CD 18 EC                    CALL    IOCWT           ;WAIT FOR STATUS OR TIMEOUT
+     314/    EC03 : 78                  	        MOV     A,B             ;OUTPUT COMMAND
+     315/    EC04 : D3 C1                       OUT     IOCC
+     316/    EC06 : C9                  	        RET
+     317/    EC07 :                     		
+     318/    EC07 : =0EBFEH              IOCDRC  EQU     IOCCOD          ;DEFINITION HERE DUE TO FORWARD REFERENCE
+     319/    EC07 :                     		
+     320/    EC07 :                     		;;;     IOCDID - IOC DATA IN DRIVER
+     321/    EC07 :                     		;
+     322/    EC07 :                     		;       RETURNS:
+     323/    EC07 :                     		;           A = DATA
+     324/    EC07 :                     		;
+     325/    EC07 :                     		;       MODIFIES A,E,HL
+     326/    EC07 :                     		
+     327/    EC07 : 1E 01               IOCDID: MVI     E,OBF           ;TEST FOR OBF STATUS
+     328/    EC09 : CD 18 EC                    CALL    IOCWT
+     329/    EC0C : DB C0                       IN      IOCI            ;READ DATA
+     330/    EC0E : C9                  	        RET
+     331/    EC0F :                     		
+     332/    EC0F :                     		;;;     IOCDOD - IOC DATA OUT DRIVER
+     333/    EC0F :                     		;
+     334/    EC0F :                     		;       PARAMETER:
+     335/    EC0F :                     		;           C = DATA
+     336/    EC0F :                     		;
+     337/    EC0F :                     		;       MODIFIES A,E,HL
+     338/    EC0F :                     		
+     339/    EC0F : 1E 00               IOCDOD: MVI     E,0             ;TEST FOR ZERO STATUS
+     340/    EC11 : CD 18 EC                    CALL    IOCWT           ;WAIT FOR READY STATUS
+     341/    EC14 : 79                  	        MOV     A,C             ;WRITE DATA
+     342/    EC15 : D3 C0                       OUT     IOCO
+     343/    EC17 : C9                  	        RET
+     344/    EC18 :                     		
+     345/    EC18 :                     		;;;     IOCWT - IOC WAIT
+     346/    EC18 :                     		;           IOCWT WILL WAIT FOR THE IOC STATUS TO BE EQUAL TO REG. E,
+     347/    EC18 :                     		;       OR TO TIMEOUT
+     348/    EC18 :                     		;
+     349/    EC18 :                     		;       PARAMETERS:
+     350/    EC18 :                     		;           E = STATUS DESIRED
+     351/    EC18 :                     		;
+     352/    EC18 :                     		;       RETURNS:
+     353/    EC18 :                     		;           TOFLAG UPDATED TO 0FFH IF TIMEOUT HAS OCCURED
+     354/    EC18 :                     		
+     355/    EC18 : 21 00 10            IOCWT:  LXI     H,01000H        ;WAIT COUNT
+     356/    EC1B : DB C1               IOCWT1: IN      IOCS            ;CHECK STATUS
+     357/    EC1D : E6 07                       ANI     F0 | IBF | OBF
+     358/    EC1F : AB                  	        XRA     E               ;CHECK FOR DESIRED STATUS
+     359/    EC20 : C8                  	        RZ                      ;RETURN IF OK
+     360/    EC21 : 2B                  	        DCX     H               ;DECREMENT TIMEOUT
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 7 - 6/17/2023 15:9:31
+IOCTST - IOC TEST
+
+
+     361/    EC22 : 7D                  	        MOV     A,L             ;TEST FOR TIMED OUT
+     362/    EC23 : B4                  	        ORA     H
+     363/    EC24 : C2 1B EC                    JNZ     IOCWT1          ;IF NOT TIMED OUT
+     364/    EC27 : 3E FF                       MVI     A,0FFH          ;;UPDATE TOFLAG TO FAILURE STATUS
+     365/    EC29 : 32 11 00                    STA     TOFLAG
+     366/    EC2C : C9                  	        RET                     ;RETURN
+     367/    EC2D :                     		
+     368/    EC2D :                     		;$       TITLE   ('PIOTST - PIO TEST')
+     369/    EC2D :                     		        TITLE   "PIOTST - PIO TEST"
+     370/    EC2D :                     		;$       EJECT
+     371/    EC2D :                     		
+     372/    EC2D :                     		;;;     PIOTST - PIO TEST
+     373/    EC2D :                     		
+     374/    EC2D :                     		PIOTST:
+     375/    EC2D :                     		
+     376/    EC2D :                     		;       ECHO TEST
+     377/    EC2D :                     		
+     378/    EC2D : 0E 55                       MVI     C,55H           ;TRY TO ECHO A 55H
+     379/    EC2F : CD 74 EC                    CALL    PIODRA
+     380/    EC32 : 21 11 00                    LXI     H,TOFLAG        ;TEST TIME-OUT AND RESULT FLAGS
+     381/    EC35 : B6                  	        ORA     M
+     382/    EC36 : CA 40 EC                    JZ      PI01            ;IF RESULT OK
+     383/    EC39 : 01 F6 EE                    LXI     B,PIOM1         ;FAILURE MESSAGE
+     384/    EC3C : CD DB ED                    CALL    TEST
+     385/    EC3F : C9                  	        RET                     ;DO NOT DO OTHER TESTS IF NOT PRESENT
+     386/    EC40 :                     		
+     387/    EC40 :                     		;       PIO CHECKSUM TEST
+     388/    EC40 :                     		
+     389/    EC40 : 06 08               PI01:   MVI     B,CSMEM         ;CHECKSUM COMMAND
+     390/    EC42 : CD 85 EC                    CALL    PIODRB
+     391/    EC45 : 01 09 EF                    LXI     B,PIOM2
+     392/    EC48 : CD DB ED                    CALL    TEST
+     393/    EC4B :                     		
+     394/    EC4B :                     		;       PIO RAM TEST
+     395/    EC4B :                     		
+     396/    EC4B : 06 09                       MVI     B,TRAM          ;TEST RAM COMMAND
+     397/    EC4D : CD 85 EC                    CALL    PIODRB
+     398/    EC50 : 01 16 EF                    LXI     B,PIOM3
+     399/    EC53 : CD DB ED                    CALL    TEST
+     400/    EC56 :                     		
+     401/    EC56 :                     		;       PIO INTERRUPT TEST
+     402/    EC56 :                     		
+     403/    EC56 : 0E DF                       MVI     C,~ INT5      ;SET UP MASKS
+     404/    EC58 : CD 40 EE                    CALL    SETINT
+     405/    EC5B : 06 06                       MVI     B,SRQ           ;TURN ON PIO INTERRUPT
+     406/    EC5D : CD 8C EC                    CALL    PIODRC
+     407/    EC60 : CD 13 EE                    CALL    CHKINT          ;CHECK INTERRUPTS
+     408/    EC63 : F5                  	        PUSH    PSW             ;SAVE RESULT FLAG
+     409/    EC64 : 06 05                       MVI     B,SRQACK        ;RESET PIO INTERRUPT
+     410/    EC66 : CD 8C EC                    CALL    PIODRC
+     411/    EC69 : CD 2E EE                    CALL    RESET           ;RESTORE INTERRRUPTS TO NORMAL
+     412/    EC6C :                     		
+     413/    EC6C : F1                  	        POP     PSW             ;GET RESULT FLAG
+     414/    EC6D : 01 1E EF                    LXI     B,PIOM4         ;LOAD MESSAGE POINTER
+     415/    EC70 : CD DB ED                    CALL    TEST
+     416/    EC73 :                     		
+     417/    EC73 : C9                  	        RET
+     418/    EC74 :                     		
+     419/    EC74 :                     		;;;     PIODRA - ECHO TEST DRIVER
+     420/    EC74 :                     		;
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 8 - 6/17/2023 15:9:31
+PIOTST - PIO TEST
+
+
+     421/    EC74 :                     		;           PIODRA RUNS AN ECHO TEST WITH THE VALUE SUPPLIED, AND RETURNS THE
+     422/    EC74 :                     		;       SUCCESS FLAG IN A.
+     423/    EC74 :                     		;
+     424/    EC74 :                     		;       PARAMETER:
+     425/    EC74 :                     		;           C = DATA TO BE ECHOED
+     426/    EC74 :                     		;
+     427/    EC74 :                     		;       RETURNS:
+     428/    EC74 :                     		;           A = SUCCESS FLAG
+     429/    EC74 :                     		;               0 = PASSED
+     430/    EC74 :                     		;               0FFH - FAILED
+     431/    EC74 :                     		;
+     432/    EC74 :                     		;       CALLS:
+     433/    EC74 :                     		;           PIOCOD
+     434/    EC74 :                     		;           PIODID
+     435/    EC74 :                     		;           PIODOD
+     436/    EC74 :                     		
+     437/    EC74 : 06 07               PIODRA: MVI     B,DECHO         ;PUT OUT DATA ECHO COMMAND
+     438/    EC76 : CD 8C EC                    CALL    PIOCOD
+     439/    EC79 : CD 9D EC                    CALL    PIODOD
+     440/    EC7C : CD 95 EC                    CALL    PIODID          ;READ BACK DATA
+     441/    EC7F : 2F                  	        CMA                     ;PIO RETURNS COMPLEMENTED DATA
+     442/    EC80 : 91                  	        SUB     C               ;CHECK IF ECHO EQUALS ORIGINAL
+     443/    EC81 : C8                  	        RZ                      ;RETURN IF OK
+     444/    EC82 : 3E FF                       MVI     A,0FFH          ;OTHERWISE,RETURN FAILURE
+     445/    EC84 : C9                  	        RET
+     446/    EC85 :                     		
+     447/    EC85 :                     		;;;     PIODRB - ISSUE COMMAND AND READ DATA
+     448/    EC85 :                     		;
+     449/    EC85 :                     		;       PARAMETER:
+     450/    EC85 :                     		;           B = COMMAND
+     451/    EC85 :                     		;
+     452/    EC85 :                     		;       RETURNS:
+     453/    EC85 :                     		;           A = DATA
+     454/    EC85 :                     		;
+     455/    EC85 :                     		;       CALLS:
+     456/    EC85 :                     		;           PIOCOD
+     457/    EC85 :                     		;           PIODID
+     458/    EC85 :                     		
+     459/    EC85 : CD 8C EC            PIODRB: CALL    PIOCOD          ;PUT OUT COMMAND
+     460/    EC88 : CD 95 EC                    CALL    PIODID          ;READ DATA
+     461/    EC8B : C9                  	        RET
+     462/    EC8C :                     		
+     463/    EC8C :                     		;;;     PIODRC - ISSUE COMMAND
+     464/    EC8C :                     		;
+     465/    EC8C :                     		;       PARAMETER:
+     466/    EC8C :                     		;           B = COMMAND
+     467/    EC8C :                     		;
+     468/    EC8C :                     		;       CALLS:
+     469/    EC8C :                     		;           PIOCOD
+     470/    EC8C :                     		;PIODRC EQU     PIOCOD          ;THIS IS JUST THE COMMAND OUT DRIVER
+     471/    EC8C :                     		                                ;ACTUAL DEFINITION FOLLOWS PIOCOD
+     472/    EC8C :                     		
+     473/    EC8C :                     		;;;     PIOCOD - PIO COMMAND OUT DRIVER
+     474/    EC8C :                     		;
+     475/    EC8C :                     		;       PARAMETER:
+     476/    EC8C :                     		;          B = COMMAND
+     477/    EC8C :                     		;
+     478/    EC8C :                     		;       MODIFIES A,B,E,HL
+     479/    EC8C :                     		
+     480/    EC8C : 1E 00               PIOCOD: MVI     E,0             ;WAIT FOR 0 STATUS
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 9 - 6/17/2023 15:9:31
+PIOTST - PIO TEST
+
+
+     481/    EC8E : CD A6 EC                    CALL    PIOWT           ;CALL WAIT ROUTINE
+     482/    EC91 : 78                  	        MOV     A,B             ;OUTPUT COMMAND
+     483/    EC92 : D3 F9                       OUT     PIOC
+     484/    EC94 : C9                  	        RET
+     485/    EC95 :                     		
+     486/    EC95 : =0EC8CH              PIODRC  EQU     PIOCOD          ;DEFINITION HERE DUE TO FORWARD REFERENCE
+     487/    EC95 :                     		
+     488/    EC95 :                     		;;;     PIODID - PIO DATA IN DRIVER
+     489/    EC95 :                     		;
+     490/    EC95 :                     		;       RETURNS:
+     491/    EC95 :                     		;       A = DATA
+     492/    EC95 :                     		;
+     493/    EC95 :                     		;       MODIFIES A,E,HL
+     494/    EC95 :                     		
+     495/    EC95 : 1E 01               PIODID: MVI     E,OBF           ;WAIT FOR OBF STATUS
+     496/    EC97 : CD A6 EC                    CALL    PIOWT           ;WAIT
+     497/    EC9A : DB F8                       IN      PIOI            ;READ DATA
+     498/    EC9C : C9                  	        RET
+     499/    EC9D :                     		
+     500/    EC9D :                     		;;;     PIODOD - PIO DATA OUT DRIVER
+     501/    EC9D :                     		;
+     502/    EC9D :                     		;       PARAMETER:
+     503/    EC9D :                     		;           C = DATA
+     504/    EC9D :                     		;
+     505/    EC9D :                     		;       MODIFIES A,E,HL
+     506/    EC9D :                     		
+     507/    EC9D : 1E 00               PIODOD: MVI     E,0             ;WAIT FOR 0 STATUS
+     508/    EC9F : CD A6 EC                    CALL    PIOWT
+     509/    ECA2 : 79                  	        MOV     A,C             ;WRITE DATA
+     510/    ECA3 : D3 F8                       OUT     PIOO
+     511/    ECA5 : C9                  	        RET
+     512/    ECA6 :                     		
+     513/    ECA6 :                     		;;;     PIOWT - PIO WAIT
+     514/    ECA6 :                     		;           PIOWT WAITS FOR THE PIO STATUS TO BE EQUAL TO E, OR A TIMEOUT.
+     515/    ECA6 :                     		;
+     516/    ECA6 :                     		;       PARAMETER:
+     517/    ECA6 :                     		;           E = STATUS TO WAIT FOR
+     518/    ECA6 :                     		;
+     519/    ECA6 :                     		;       RETURNS:
+     520/    ECA6 :                     		;           TOFLAG UPDATED TO 0FFH IF A TIMEOUT OCCURS
+     521/    ECA6 :                     		;
+     522/    ECA6 :                     		;       MODIFIES:
+     523/    ECA6 :                     		;           TOFLAG,HL
+     524/    ECA6 :                     		
+     525/    ECA6 : 21 00 10            PIOWT:  LXI     H,01000H        ;WAIT COUNT
+     526/    ECA9 : DB F9               PIOWT1: IN      PIOS            ;CHECK STATUS
+     527/    ECAB : E6 07                       ANI     F0 | IBF | OBF
+     528/    ECAD : AB                  	        XRA     E               ;CHECK IF EQUAL TO DESIRED
+     529/    ECAE : C8                  	        RZ                      ;IF OK
+     530/    ECAF : 2B                  	        DCX     H               ;DECREMENT TIMER
+     531/    ECB0 : 7D                  	        MOV     A,L             ;TEST FOR TIMED OUT
+     532/    ECB1 : B4                  	        ORA     H
+     533/    ECB2 : C2 A9 EC                    JNZ     PIOWT1          ;IF NOT TIMED OUT
+     534/    ECB5 : 3E FF                       MVI     A,0FFH          ;TIMED OUT; UPDATE TOFLAG
+     535/    ECB7 : 32 11 00                    STA     TOFLAG
+     536/    ECBA : C9                  	        RET
+     537/    ECBB :                     		
+     538/    ECBB :                     		;$       TITLE   ('RAMTST - RAM TEST')
+     539/    ECBB :                     		        TITLE   "RAMTST - RAM TEST"
+     540/    ECBB :                     		;$       EJECT
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 10 - 6/17/2023 15:9:31
+RAMTST - RAM TEST
+
+
+     541/    ECBB :                     		
+     542/    ECBB :                     		;;;     RAMTST - RAM TEST
+     543/    ECBB :                     		
+     544/    ECBB :                     		RAMTST:
+     545/    ECBB :                     		
+     546/    ECBB : 21 12 00                    LXI     H,012H          ;FIRST WORD TO FILL
+     547/    ECBE : 11 FF E7                    LXI     D,0E7FFH        ;BOTTOM OF BOOT ROM
+     548/    ECC1 : CD 2D ED                    CALL    FILL
+     549/    ECC4 : 21 00 F0                    LXI     H,0F000H        ;TOP OF BOOT/DIAGNOSTIC ROM
+     550/    ECC7 : 11 FF F7                    LXI     D,0F7FFH        ;BOTTOM OF MONITOR ROM
+     551/    ECCA : CD 2D ED                    CALL    FILL
+     552/    ECCD :                     		
+     553/    ECCD :                     		;       TEST BANK 0-32K
+     554/    ECCD :                     		
+     555/    ECCD : 21 12 00                    LXI     H,012H          ;FIRST WORD TO TEST
+     556/    ECD0 : 11 FF 7F                    LXI     D,07FFFH        ;LAST WORD TO TEST
+     557/    ECD3 : CD 08 ED                    CALL    CHECK
+     558/    ECD6 : 01 2D EF                    LXI     B,RAMM1         ;'BANK 0-23K FAILURE' MESSAGE
+     559/    ECD9 : CD DB ED                    CALL    TEST
+     560/    ECDC :                     		
+     561/    ECDC :                     		;       TEST BANK 32-48K
+     562/    ECDC :                     		
+     563/    ECDC : 21 00 80                    LXI     H,08000H        ;FIRST WORD TO TEST
+     564/    ECDF : 11 FF BF                    LXI     D,0BFFFH        ;LAST WORD TO TEST
+     565/    ECE2 : CD 08 ED                    CALL    CHECK
+     566/    ECE5 : 01 3C EF                    LXI     B,RAMM2         ;'BANK 32-48K FAILURE' MESSAGE
+     567/    ECE8 : CD DB ED                    CALL    TEST
+     568/    ECEB :                     		
+     569/    ECEB :                     		;       TEST BANK 48-62K
+     570/    ECEB :                     		
+     571/    ECEB : 21 00 C0                    LXI     H,0C000H        ;FIRST WORD TO TEST
+     572/    ECEE : 11 FF E7                    LXI     D,0E7FFH        ;BOTTOM OF BOOT/DIAGNOSTIC ROM
+     573/    ECF1 : CD 08 ED                    CALL    CHECK
+     574/    ECF4 : B7                  	        ORA     A               ;TEST FOR FAILURE
+     575/    ECF5 : C2 01 ED                    JNZ     RAM1            ;IF A FAILURE
+     576/    ECF8 : 21 00 F0                    LXI     H,0F000H        ;TOP OF BOOT/DIAGNOSTIC ROM
+     577/    ECFB : 11 FF F7                    LXI     D,0F7FFH        ;BOTTOM OF MONITOR ROM
+     578/    ECFE : CD 08 ED                    CALL    CHECK
+     579/    ED01 : 01 4C EF            RAM1:   LXI     B,RAMM3         ;'BANK 48-62K FAILURE' MESSAGE
+     580/    ED04 : CD DB ED                    CALL    TEST
+     581/    ED07 : C9                  	        RET
+     582/    ED08 :                     		
+     583/    ED08 :                     		;;;     CHECK - CHECK SECTION OF MEMORY
+     584/    ED08 :                     		;
+     585/    ED08 :                     		;       PARAMETERS:
+     586/    ED08 :                     		;           DC = FIRST WORD ADDRESS OF BLOCK TO TEST
+     587/    ED08 :                     		;           HL = LAST WORD ADDRESS OF BLOCK TO TEST
+     588/    ED08 :                     		;
+     589/    ED08 :                     		;       RETURNS:
+     590/    ED08 :                     		;           A = 0 IF TEST SUCCESSFUL
+     591/    ED08 :                     		;           A = 0FFH AT FIRST FAILURE
+     592/    ED08 :                     		;
+     593/    ED08 :                     		;       CALLS:
+     594/    ED08 :                     		;           SETLIM
+     595/    ED08 :                     		
+     596/    ED08 : CD 3B ED            CHECK:  CALL    SETLIM          ;SET UP LIMITS TO TAKE MEMCHK INTO ACCOUNT
+     597/    ED0B :                     		
+     598/    ED0B : 7A                  	CHECK1: MOV     A,D             ;CHECK IF ALREADY DONE
+     599/    ED0C : B3                  	        ORA     E
+     600/    ED0D : CA 27 ED                    JZ      CHECK2          ;IF ALREADY DONE
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 11 - 6/17/2023 15:9:31
+RAMTST - RAM TEST
+
+
+     601/    ED10 :                     		
+     602/    ED10 : 7C                  	        MOV     A,H             ;GENERATE PATTERN
+     603/    ED11 : AD                  	        XRA     L
+     604/    ED12 : BE                  	        CMP     M               ;CHECK IF PATTERN STILL IN MEMORY
+     605/    ED13 : C2 2A ED                    JNZ     CHECK3
+     606/    ED16 :                     		
+     607/    ED16 : 2F                  	        CMA                     ;STORE AND VERIFY COMPLEMENT
+     608/    ED17 : 77                  	        MOV     M,A
+     609/    ED18 : BE                  	        CMP     M               ;VERIFY 0FFH IS THERE
+     610/    ED19 : C2 2A ED                    JNZ     CHECK3
+     611/    ED1C :                     		
+     612/    ED1C : 2F                  	        CMA                     ;PUT PATTERN BACK
+     613/    ED1D : 77                  	        MOV     M,A
+     614/    ED1E : BE                  	        CMP     M               ;VERIFY PATTERN
+     615/    ED1F : C2 2A ED                    JNZ     CHECK3
+     616/    ED22 :                     		
+     617/    ED22 : 23                  	        INX     H               ;ADVANCE ADDRESS
+     618/    ED23 : 1B                  	        DCX     D               ;DECREMENT COUNT
+     619/    ED24 : C3 0B ED                    JMP     CHECK1          ;LOOP
+     620/    ED27 :                     		
+     621/    ED27 : 3E 00               CHECK2: MVI     A,0             ;RETURN SUCCESS
+     622/    ED29 : C9                  	        RET
+     623/    ED2A :                     		
+     624/    ED2A : 3E FF               CHECK3: MVI     A,0FFH          ;RETURN FAILURE
+     625/    ED2C : C9                  	        RET
+     626/    ED2D :                     		
+     627/    ED2D :                     		;;;     FILL - FILL MEMORY WITH BACKGROUND, TAKING MEMCHK INTO ACCOUNT.
+     628/    ED2D :                     		;
+     629/    ED2D :                     		;           FILL WILL PUT BACKGROUND INTO MEMORY STARTING AT FIRST WORD ADDRESS
+     630/    ED2D :                     		;       AND ENDING AT MEMCHK OR LAST MEMORY ADDRESS, WHICHEVER IS ENCOUNTERED
+     631/    ED2D :                     		;       FIRST
+     632/    ED2D :                     		;
+     633/    ED2D :                     		;       PARAMETERS:
+     634/    ED2D :                     		;           HL FIRST WORD ADDRESS
+     635/    ED2D :                     		;           DE = LAST WORD ADDRESS
+     636/    ED2D :                     		;
+     637/    ED2D :                     		;       CALLS:
+     638/    ED2D :                     		;           SETLIM
+     639/    ED2D :                     		
+     640/    ED2D : CD 3B ED            FILL:   CALL    SETLIM
+     641/    ED30 :                     		
+     642/    ED30 : 7A                  	FILL1:  MOV     A,D             ;CHECK IF COUNT=0
+     643/    ED31 : B3                  	        ORA     E
+     644/    ED32 : C8                  	        RZ
+     645/    ED33 : 7C                  	        MOV     A,H             ;GENERATE PATTERN
+     646/    ED34 : AD                  	        XRA     L
+     647/    ED35 : 77                  	        MOV     M,A             ;STORE PATTERN
+     648/    ED36 : 23                  	        INX     H               ;INCREMENT POINTER TO NEXT LOCATION
+     649/    ED37 : 1B                  	        DCX     D               ;DECREMENT COUNTER
+     650/    ED38 : C3 30 ED                    JMP     FILL1           ;LOOP
+     651/    ED3B :                     		
+     652/    ED3B :                     		;;;     SETLIM - SET LIMITS
+     653/    ED3B :                     		;
+     654/    ED3B :                     		;           SETLIM PERFORMS THE PLM FUNCTION:
+     655/    ED3B :                     		;
+     656/    ED3B :                     		;       IF FWA <= MEMCHK AND MEMCHK <= LWA
+     657/    ED3B :                     		;       THEN COUNT = MEMCHK - FWA + 1;
+     658/    ED3B :                     		;       ELSE COUNT = LWA - FWA + 1;
+     659/    ED3B :                     		;
+     660/    ED3B :                     		;       PARAMETERS:
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 12 - 6/17/2023 15:9:31
+RAMTST - RAM TEST
+
+
+     661/    ED3B :                     		;           HL = FIRST WORD ADDRESS (FWA)
+     662/    ED3B :                     		;           E = LAST WORD ADDRESS (LWA)
+     663/    ED3B :                     		;
+     664/    ED3B :                     		;       RETURNS:
+     665/    ED3B :                     		;           HL = FIRST WORD ADDRESS
+     666/    ED3B :                     		;           DE = COUNT
+     667/    ED3B :                     		;
+     668/    ED3B :                     		;       CALLS:
+     669/    ED3B :                     		;           MEMCHK
+     670/    ED3B :                     		
+     671/    ED3B : E5                  	SETLIM: PUSH    H               ;SAVE HL AND DE DURING CALL TO MEMCHK
+     672/    ED3C : D5                  	        PUSH    D
+     673/    ED3D :                     		
+     674/    ED3D : CD 1B F8                    CALL    MEMCHK
+     675/    ED40 : 4F                  	        MOV     C,A             ;BC=MEMCHK
+     676/    ED41 :                     		
+     677/    ED41 : D1                  	        POP     D               ;RESTORE HL AND DE
+     678/    ED42 : E1                  	        POP     H
+     679/    ED43 :                     		
+     680/    ED43 : 95                  	        SUB     L               ;SUBTRACT FWA FROM MEMCHK
+     681/    ED44 : 78                  	        MOV     A,B
+     682/    ED45 : 9C                  	        SBB     H
+     683/    ED46 : DA 52 ED                    JC      SETLM1          ;JUMP IF MEMCHK < FWA
+     684/    ED49 :                     		
+     685/    ED49 : 7B                  	        MOV     A,E             ;SUBTRACT MEMCHK FROM LWA
+     686/    ED4A : 91                  	        SUB     C
+     687/    ED4B : 7A                  	        MOV     A,D
+     688/    ED4C : 98                  	        SBB     B
+     689/    ED4D : DA 52 ED                    JC      SETLM1          ;JUMP IF LWA < MEMCHK
+     690/    ED50 :                     		
+     691/    ED50 : 50                  	        MOV     D,B             ;MEMCHK IS WITHIN RANGE; USE IT AS LWA
+     692/    ED51 : 59                  	        MOV     E,C
+     693/    ED52 :                     		
+     694/    ED52 : 7B                  	SETLM1: MOV     A,E             ;SUBTRACT FWA FROM MEMCHK OR LWA,
+     695/    ED53 : 95                  	        SUB     L               ;   AS THE CASE MAY BE
+     696/    ED54 : 5F                  	        MOV     E,A
+     697/    ED55 : 7A                  	        MOV     A,D
+     698/    ED56 : 9C                  	        SBB     H
+     699/    ED57 : 57                  	        MOV     D,A
+     700/    ED58 :                     		
+     701/    ED58 : 13                  	        INX     D               ;ADD 1
+     702/    ED59 :                     		
+     703/    ED59 : C9                  	        RET
+     704/    ED5A :                     		
+     705/    ED5A :                     		;$       TITLE   ('UTILITY ROUTINES')
+     706/    ED5A :                     		       TITLE    "UTILITY ROUTINES"
+     707/    ED5A :                     		;$       EJECT
+     708/    ED5A :                     		
+     709/    ED5A :                     		;;;     FINISH - PRINT ' -- PASSED' IF FFLAG 0
+     710/    ED5A :                     		;
+     711/    ED5A :                     		;       ACCESSES:
+     712/    ED5A :                     		;           FFLAG
+     713/    ED5A :                     		;
+     714/    ED5A :                     		;       CALLS:
+     715/    ED5A :                     		;           PRINT
+     716/    ED5A :                     		
+     717/    ED5A : 3A 10 00            FINISH: LDA     FFLAG           ;TEST FFLAG
+     718/    ED5D : B7                  	        ORA     A
+     719/    ED5E : C0                  	        RNZ                     ;RETURN IF TEST FAILED
+     720/    ED5F : 01 66 ED                    LXI     B,FINA          ;PRINT ' -- PASSED' MESSAGE
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 13 - 6/17/2023 15:9:31
+UTILITY ROUTINES
+
+
+     721/    ED62 : CD 9E ED                    CALL    PRINTL
+     722/    ED65 : C9                  	        RET
+     723/    ED66 :                     		
+     724/    ED66 :                     		;FINA:   DB      ' -- PASSED',0
+     725/    ED66 : 20 2D 2D 20 50 41   FINA:   DB      " -- PASSED",0
+             ED6C : 53 53 45 44 00    
+     726/    ED71 :                     		
+     727/    ED71 :                     		;;;     INIT - SAVE INVIRONMENT ON STACK
+     728/    ED71 :                     		;           INIT SAVES THE INTERRUPT MASKS OF SOTH 8257'S AND THE
+     729/    ED71 :                     		;       CONTENTS OF FFLAG. IT IS INTENDED TO BE USED WITH RESTOR,
+     730/    ED71 :                     		;       AND MUST BE CALLED AT THE SAME NEST LEVEL AS RESTOR
+     731/    ED71 :                     		
+     732/    ED71 : D1                  	INIT:   POP     D               ;SAVE RETURN SINCE STACK TO BE MODIFIED
+     733/    ED72 : F5                  	        PUSH    PSW             ;SAVE A AND FLAGS
+     734/    ED73 : 2A 38 00                    LHLD    INT7V           ;SAVE INTERRUPT 7 VECTOR
+     735/    ED76 : E5                  	        PUSH    H
+     736/    ED77 : 2A 3A 00                    LHLD    INT7V+2         ;SAVE REST OF VECTOR
+     737/    ED7A : E5                  	        PUSH    H
+     738/    ED7B : 2A 10 00                    LHLD    010H            ;SAVE TOFLAG AND FFLAG
+     739/    ED7E : E5                  	        PUSH    H
+     740/    ED7F : DB FA                       IN      IPICMR          ;READ IO PIO MASK REGISTER
+     741/    ED81 : 47                  	        MOV     B,A
+     742/    ED82 : DB FC                       IN      SPICMR          ;READ SYSTEM PIO MASK REGISTER
+     743/    ED84 : 4F                  	        MOV     C,A
+     744/    ED85 : C5                  	        PUSH    B               ;SAVE THE MASKS IN THE STACK
+     745/    ED86 : 3E 00                       MVI     A,0             ;INITIALIZE FFLAG AND TOFLAG
+     746/    ED88 : 32 10 00                    STA     FFLAG
+     747/    ED8B : 32 11 00                    STA     TOFLAG
+     748/    ED8E : D5                  	        PUSH    D               ;RETURN
+     749/    ED8F : C9                  	        RET                     
+     750/    ED90 :                     		
+     751/    ED90 :                     		;;;     PRINT - PRINT STRING
+     752/    ED90 :                     		;
+     753/    ED90 :                     		;       PARAMETER:
+     754/    ED90 :                     		;           BC = POINTER TO STRING TERMINATED WITH A NULL.
+     755/    ED90 :                     		;
+     756/    ED90 :                     		;       CALLS:
+     757/    ED90 :                     		;           CO
+     758/    ED90 :                     		
+     759/    ED90 : C5                  	PRINT:  PUSH    B               ;SAVE POINTER ON THE STACK
+     760/    ED91 :                     		
+     761/    ED91 : E1                  	PRINT1: POP     H               ;LOAD POINTER INTO HL
+     762/    ED92 : 4E                  	        MOV     C,M             ;READ NEXT CHARACTER
+     763/    ED93 : 79                  	        MOV     A,C             ;PREPARE FOR TERMINATOR CHECK
+     764/    ED94 : B7                  	        ORA     A               ;CHECK FOR STRING TERMINATOR
+     765/    ED95 : C8                  	        RZ                      ;RETURN IF NULL
+     766/    ED96 : 23                  	        INX     H               ;INCREMENT POINTER
+     767/    ED97 : E5                  	        PUSH    H               ;RESTORE ON STACK
+     768/    ED98 : CD 09 F8                    CALL    CO              ;PRINT CHARACTER
+     769/    ED9B : C3 91 ED                    JMP     PRINT1          ;LOOP UNTIL DONE
+     770/    ED9E :                     		
+     771/    ED9E :                     		;;;     PRINTL - PRINT MESSAGE WITH A CR-LF ADDED AT THE END
+     772/    ED9E :                     		;
+     773/    ED9E :                     		;       PARAMETER:
+     774/    ED9E :                     		;           BC = POINTER TO STRING TERMINATED WITH A NULL
+     775/    ED9E :                     		;
+     776/    ED9E :                     		;       CALLS:
+     777/    ED9E :                     		;           PRINT
+     778/    ED9E :                     		
+     779/    ED9E : CD 90 ED            PRINTL: CALL    PRINT           ;PRINT ORIGINAL STRING
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 14 - 6/17/2023 15:9:31
+UTILITY ROUTINES
+
+
+     780/    EDA1 : 01 49 EE                    LXI     B,CRLF          ;PRINT CR-LF
+     781/    EDA4 : CD 90 ED                    CALL    PRINT
+     782/    EDA7 : C9                  	        RET
+     783/    EDA8 :                     		
+     784/    EDA8 :                     		;;;     RESTOR - RESTOR ENVIRONMENT
+     785/    EDA8 :                     		;           RESTOR IS THE COMPLEMENT OF INIT
+     786/    EDA8 :                     		
+     787/    EDA8 : D1                  	RESTOR: POP     D               ;SAVE RETURN ADDR WHILE PLAYING WITH STACK
+     788/    EDA9 : C1                  	        POP     B               ;READ INTERRUPT MASKS
+     789/    EDAA : 79                  	        MOV     A,C             ;RESTORE SYSTEM INTERRUPT MASK
+     790/    EDAB : D3 FC                       OUT     SPICMR
+     791/    EDAD : 78                  	        MOV     A,B             ;RESTORE 10 INTERRUPT MASK
+     792/    EDAE : D3 FA                       OUT     IPICMR
+     793/    EDB0 : E1                  	        POP     H               ;RESTORE TOFLAG AND FFLAG
+     794/    EDB1 : 22 10 00                    SHLD    010H
+     795/    EDB4 : E1                  	        POP     H               ;RESTORE INTERRUPT VECTOR
+     796/    EDB5 : 22 3A 00                    SHLD    INT7V+2
+     797/    EDB8 : E1                  	        POP     H
+     798/    EDB9 : 22 38 00                    SHLD    INT7V
+     799/    EDBC : F1                  	        POP     PSW             ;RESTORE A AND FLAGS
+     800/    EDBD : D5                  	        PUSH    D               ;RETURN
+     801/    EDBE : C9                  	        RET
+     802/    EDBF :                     		
+     803/    EDBF :                     		;;;     SETUP - SET UP FOR TEST
+     804/    EDBF :                     		;           SETUP PRINTS OUT THE START MESSAGE FOR A TEST AND INITIALIZES
+     805/    EDBF :                     		;       FFLAG TO 0.
+     806/    EDBF :                     		;
+     807/    EDBF :                     		;       PARAMETER:
+     808/    EDBF :                     		;       BC = POINTER TO START MESSAGE
+     809/    EDBF :                     		;
+     810/    EDBF :                     		;       MODIFIES:
+     811/    EDBF :                     		;           FFLAG
+     812/    EDBF :                     		;
+     813/    EDBF :                     		;       CALLS:
+     814/    EDBF :                     		;           PRINT
+     815/    EDBF :                     		
+     816/    EDBF : C5                  	SETUP:  PUSH    B               ;SAVE MESSAGE POINTER
+     817/    EDC0 : 01 D0 ED                    LXI     B,SETA          ;PRINT 'TESTING '
+     818/    EDC3 : CD 90 ED                    CALL    PRINT
+     819/    EDC6 : C1                  	        POP     B               ;PRINT MESSAGE
+     820/    EDC7 : CD 90 ED                    CALL    PRINT
+     821/    EDCA : 3E 00                       MVI     A,0             ;ZERO OUT FFLAG
+     822/    EDCC : 32 10 00                    STA     FFLAG
+     823/    EDCF : C9                  	        RET
+     824/    EDD0 :                     		
+     825/    EDD0 :                     		;SETA:   DB      '  TESTING ',0
+     826/    EDD0 : 20 20 54 45 53 54   SETA:   DB      "  TESTING ",0
+             EDD6 : 49 4E 47 20 00    
+     827/    EDDB :                     		
+     828/    EDDB :                     		;;;     TEST - TEST RESULT FLAG OF A TEST
+     829/    EDDB :                     		;           THIS ROUTINE TESTS THE RESULT OF A TEST AND PRINTS A
+     830/    EDDB :                     		;       FAILURE MESSAGE IF JUSTIFIED. THE FLAG 'FFLAG' ARE TESTED,
+     831/    EDDB :                     		;       AND IF THERE HAVE BEEN NO FAILURES IN THE TEST TO THAT POINT,
+     832/    EDDB :                     		;       A CR-LF PAIR IS OUTPUT. FFLAG IS UPDATED TO TO REFLECT THE
+     833/    EDDB :                     		;       FAILURE. TOFLAG IS RESET TO 0.
+     834/    EDDB :                     		;
+     835/    EDDB :                     		;       PARAMETERS:
+     836/    EDDB :                     		;           A = RESULT FLAG
+     837/    EDDB :                     		;               0 => TEST PASSED
+     838/    EDDB :                     		;               0FFH => TEST FAILED
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 15 - 6/17/2023 15:9:31
+UTILITY ROUTINES
+
+
+     839/    EDDB :                     		;           BC = MESSAGE ADDRESS
+     840/    EDDB :                     		;
+     841/    EDDB :                     		;       MODIFIES:
+     842/    EDDB :                     		;           FFLAG
+     843/    EDDB :                     		;           TOFLAG
+     844/    EDDB :                     		;
+     845/    EDDB :                     		;       CALLS:
+     846/    EDDB :                     		;           PRINT
+     847/    EDDB :                     		
+     848/    EDDB : 21 11 00            TEST:   LXI     H,TOFLAG        ;CHECK TIMEOUT AND RESULT FLAGS
+     849/    EDDE : B6                  	        ORA     M               ;CHECK FLAGS
+     850/    EDDF : C8                  	        RZ                      ;RETURN IF PASSED
+     851/    EDE0 : C5                  	        PUSH    B               ;SAVE MESSAGE POINTER
+     852/    EDE1 : 3A 10 00                    LDA     FFLAG           ;CHECK FAILURE FLAG
+     853/    EDE4 : B7                  	        ORA     A
+     854/    EDE5 : C2 F3 ED                    JNZ     TEST1           ;IF THERE HAS ALREADY BEEN A FAILURE
+     855/    EDE8 :                     		
+     856/    EDE8 : 01 49 EE                    LXI     B,CRLF          ;CR-LF MESSAGE
+     857/    EDEB : CD 90 ED                    CALL    PRINT
+     858/    EDEE : 3E FF                       MVI     A,0FFH          ;SET FFLAG TO FAILED
+     859/    EDF0 : 32 10 00                    STA     FFLAG
+     860/    EDF3 :                     		
+     861/    EDF3 : 01 03 EE            TEST1:  LXI     B,TESTA         ;'FAILURE -- ' MESSAGE
+     862/    EDF6 : CD 90 ED                    CALL    PRINT
+     863/    EDF9 :                     		
+     864/    EDF9 : C1                  	        POP     B               ;POP ERROR MESSAGE POINTER
+     865/    EDFA : CD 9E ED                    CALL    PRINTL          ;PRINT ERROR MESSAGE
+     866/    EDFD :                     		
+     867/    EDFD : 3E 00                       MVI     A,0             ;RESET TOFLAG
+     868/    EDFF : 32 11 00                    STA     TOFLAG
+     869/    EE02 : C9                  	        RET
+     870/    EE03 :                     		
+     871/    EE03 :                     		;TESTA:  DB      '    FAILURE -- ',0
+     872/    EE03 : 20 20 20 20 46 41   TESTA:  DB      "    FAILURE -- ",0
+             EE09 : 49 4C 55 52 45 20 
+             EE0F : 2D 2D 20 00       
+     873/    EE13 :                     		
+     874/    EE13 :                     		;$       TITLE   (' INTERRUPT UTILITIES')
+     875/    EE13 :                     		        TITLE   "INTERRUPT UTILITIES"
+     876/    EE13 :                     		;$       EJECT
+     877/    EE13 :                     		
+     878/    EE13 :                     		;;;     CHKINT - CHECK INTERRUPTS
+     879/    EE13 :                     		;
+     880/    EE13 :                     		;       ENTRY CONDITIONS:
+     881/    EE13 :                     		;           ALL UNDESIRED INTERRUPTS MASKED OUT
+     882/    EE13 :                     		;           DESIRED INTERRUPT LINE ON
+     883/    EE13 :                     		;           8080 INTERRUPTS DISABLED
+     884/    EE13 :                     		;
+     885/    EE13 :                     		;       RETURNS:
+     886/    EE13 :                     		;           A = SUCCCESS FLAG
+     887/    EE13 :                     		;               0 = TEST PASSED
+     888/    EE13 :                     		;               0FFH = TEST FAILED
+     889/    EE13 :                     		;           8080 INTERRUPTS TURNED OFF
+     890/    EE13 :                     		
+     891/    EE13 : 3E C3               CHKINT: MVI     A,0C3H          ;STORE A JUMP TO CHK2
+     892/    EE15 : 32 38 00                    STA     INT7V           ;   INTO INT7V
+     893/    EE18 : 21 29 EE                    LXI     H,CHK2
+     894/    EE1B : 22 39 00                    SHLD    INT7V+1
+     895/    EE1E :                     		
+     896/    EE1E : FB                  	        EI                      ;TURN THE INTERRUPTS ON
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 16 - 6/17/2023 15:9:31
+INTERRUPT UTILITIES
+
+
+     897/    EE1F : 06 FF                       MVI     B,255           ;WAIT A WHILE
+     898/    EE21 : 05                  	CHK1:   DCR     B               ;DECREMENT THE COUNTER
+     899/    EE22 : C2 21 EE                    JNZ     CHK1            ;IF NOT COUNTED OUT YET
+     900/    EE25 : F3                  	        DI                      ;TEST DONE; FAILED
+     901/    EE26 : 3E FF                       MVI     A,0FFH          ;RETURN FAILURE
+     902/    EE28 : C9                  	        RET
+     903/    EE29 :                     		
+     904/    EE29 : F3                  	CHK2:   DI                      ;TURN OFF INTERRUPTS
+     905/    EE2A : E1                  	        POP     H               ;GET RID OF EXTRA RETURN ADDRESS
+     906/    EE2B : 3E 00                       MVI     A,0             ;RETURN SUCCESS
+     907/    EE2D : C9                  	        RET
+     908/    EE2E :                     		
+     909/    EE2E :                     		;;;     RESET - TRANSMIT EOI'S TO INTERRUPT CONTROLLERS
+     910/    EE2E :                     		;
+     911/    EE2E :                     		;       ENTRY CONDITIONS:
+     912/    EE2E :                     		;           INTERRUPTS TURNED OFF
+     913/    EE2E :                     		;
+     914/    EE2E :                     		;       EXIT CONDITIONS:
+     915/    EE2E :                     		;           INTERRUPTS TURNED ON
+     916/    EE2E :                     		
+     917/    EE2E : 3E 0C               RESET:  MVI     A,POLL          ;SEND A POLL TO PICS             
+     918/    EE30 : D3 FD                       OUT     SPICCR
+     919/    EE32 : D3 FB                       OUT     IPICCR
+     920/    EE34 : DB FD                       IN      SPICCR          ;READ AND IGNORE POLL DATA
+     921/    EE36 : DB FB                       IN      IPICCR
+     922/    EE38 : 3E 20                       MVI     A,EOI
+     923/    EE3A : D3 FB                       OUT     IPICCR          ;OUTPUT EOI TO 10 PIC COMMAND REGISTER
+     924/    EE3C : D3 FD                       OUT     SPICCR          ;OUTPUT EOI TO SYSTEM PIC COMMAND REGISTER
+     925/    EE3E : FB                  	        EI
+     926/    EE3F : C9                  	        RET
+     927/    EE40 :                     		
+     928/    EE40 :                     		;;;     SETINT - SET UP FOR INTERRUPT TEST
+     929/    EE40 :                     		;
+     930/    EE40 :                     		;       PARAMETER:
+     931/    EE40 :                     		;           C = MASK FOR 10 PIC
+     932/    EE40 :                     		;
+     933/    EE40 :                     		;       EXIT CONDITIONS:
+     934/    EE40 :                     		;           PIC'S SET UP SO THIS IS THE ONLY INTERRUPT ENABLEABLE
+     935/    EE40 :                     		
+     936/    EE40 : F3                  	SETINT: DI
+     937/    EE41 : 3E 7F                       MVI     A,NOTINT7      ;INITIALIZE SYSTEM PIC FOR ONLY 10 INTERRUPTS
+     938/    EE43 : D3 FC                       OUT     SPICMR
+     939/    EE45 : 79                  	        MOV     A,C             ;SET UP 10 PIC
+     940/    EE46 : D3 FA                       OUT     IPICMR
+     941/    EE48 : C9                  	        RET
+     942/    EE49 :                     		
+     943/    EE49 :                     		;$       TITLE   ('MESSAGES')
+     944/    EE49 :                     		        TITLE   "MESSAGES"
+     945/    EE49 :                     		;$       EJECT
+     946/    EE49 :                     		
+     947/    EE49 : =>FALSE              	        IF      0
+     948/    EE49 :                     	CRLF:   DB      CR,LF,0
+     949/    EE49 :                     	SIGNON: DB      CR,LF,'INTELLEC SERIES II DIAGNOSTIC V1.0',0
+     950/    EE49 :                     	SGNOFF: DB      'END DIAGNOSTIC',0
+     951/    EE49 :                     	MIMI:   DB      'CHECKSUMS',0
+     952/    EE49 :                     	MIM2:   DB      'IOC',0
+     953/    EE49 :                     	MIM3:   DB      'PIO',0
+     954/    EE49 :                     	MIM4:   DB      'RAM' ,0
+     955/    EE49 :                     	CHKM1:  DB      'MONITOR CHECKSUM',0
+     956/    EE49 :                     	CHKM2:  DB      'BOOT CHECKSUM',0
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 17 - 6/17/2023 15:9:31
+MESSAGES
+
+
+     957/    EE49 :                     	IOCM1:  DB      'IOC NOT RESPONDING (N/A 210)',0
+     958/    EE49 :                     	IOCM2:  DB      'IOC CHECKSUM', 0
+     959/    EE49 :                     	IOCM3:  DB      'IOC RAM',0
+     960/    EE49 :                     	IOCM4:  DB      'IOC INTERRUPTS',0
+     961/    EE49 :                     	PIOM1:  DB      'PIO NOT RESPONOING',0
+     962/    EE49 :                     	PIOM2:  DB      'PIO CHECKSUM',0
+     963/    EE49 :                     	PIOM3:  DB      'PIO RAM',0
+     964/    EE49 :                     	PIOM4:  DB      'PIO INTERRUPTS',0
+     965/    EE49 :                     	RAMM1:  DB      'RAM BANK 0-32K',0
+     966/    EE49 :                     	RAMM2:  DB      'RAM BANK 32-48K',0
+     967/    EE49 :                     	RAMM3:  DB      'RAM BANK 48-62K',0
+     968/    EE49 : [947]                		        ENDIF
+     969/    EE49 :                     		
+     970/    EE49 : 0D 0A 00            CRLF:   DB      CR,LF,0
+     971/    EE4C : 0D 0A 49 4E 54 45   SIGNON: DB      CR,LF,"INTELLEC SERIES II DIAGNOSTIC V1.0",0
+             EE52 : 4C 4C 45 43 20 53 
+             EE58 : 45 52 49 45 53 20 
+             EE5E : 49 49 20 44 49 41 
+             EE64 : 47 4E 4F 53 54 49 
+             EE6A : 43 20 56 31 2E 30 
+             EE70 : 00                
+     972/    EE71 : 45 4E 44 20 44 49   SGNOFF: DB      "END DIAGNOSTIC",0
+             EE77 : 41 47 4E 4F 53 54 
+             EE7D : 49 43 00          
+     973/    EE80 : 43 48 45 43 4B 53   MIMI:   DB      "CHECKSUMS",0
+             EE86 : 55 4D 53 00       
+     974/    EE8A : 49 4F 43 00         MIM2:   DB      "IOC",0
+     975/    EE8E : 50 49 4F 00         MIM3:   DB      "PIO",0
+     976/    EE92 : 52 41 4D 00         MIM4:   DB      "RAM" ,0
+     977/    EE96 : 4D 4F 4E 49 54 4F   CHKM1:  DB      "MONITOR CHECKSUM",0
+             EE9C : 52 20 43 48 45 43 
+             EEA2 : 4B 53 55 4D 00    
+     978/    EEA7 : 42 4F 4F 54 20 43   CHKM2:  DB      "BOOT CHECKSUM",0
+             EEAD : 48 45 43 4B 53 55 
+             EEB3 : 4D 00             
+     979/    EEB5 : 49 4F 43 20 4E 4F   IOCM1:  DB      "IOC NOT RESPONDING (N/A 210)",0
+             EEBB : 54 20 52 45 53 50 
+             EEC1 : 4F 4E 44 49 4E 47 
+             EEC7 : 20 28 4E 2F 41 20 
+             EECD : 32 31 30 29 00    
+     980/    EED2 : 49 4F 43 20 43 48   IOCM2:  DB      "IOC CHECKSUM", 0
+             EED8 : 45 43 4B 53 55 4D 
+             EEDE : 00                
+     981/    EEDF : 49 4F 43 20 52 41   IOCM3:  DB      "IOC RAM",0
+             EEE5 : 4D 00             
+     982/    EEE7 : 49 4F 43 20 49 4E   IOCM4:  DB      "IOC INTERRUPTS",0
+             EEED : 54 45 52 52 55 50 
+             EEF3 : 54 53 00          
+     983/    EEF6 : 50 49 4F 20 4E 4F   PIOM1:  DB      "PIO NOT RESPONOING",0
+             EEFC : 54 20 52 45 53 50 
+             EF02 : 4F 4E 4F 49 4E 47 
+             EF08 : 00                
+     984/    EF09 : 50 49 4F 20 43 48   PIOM2:  DB      "PIO CHECKSUM",0
+             EF0F : 45 43 4B 53 55 4D 
+             EF15 : 00                
+     985/    EF16 : 50 49 4F 20 52 41   PIOM3:  DB      "PIO RAM",0
+             EF1C : 4D 00             
+     986/    EF1E : 50 49 4F 20 49 4E   PIOM4:  DB      "PIO INTERRUPTS",0
+             EF24 : 54 45 52 52 55 50 
+             EF2A : 54 53 00          
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 18 - 6/17/2023 15:9:31
+MESSAGES
+
+
+     987/    EF2D : 52 41 4D 20 42 41   RAMM1:  DB      "RAM BANK 0-32K",0
+             EF33 : 4E 4B 20 30 2D 33 
+             EF39 : 32 4B 00          
+     988/    EF3C : 52 41 4D 20 42 41   RAMM2:  DB      "RAM BANK 32-48K",0
+             EF42 : 4E 4B 20 33 32 2D 
+             EF48 : 34 38 4B 00       
+     989/    EF4C : 52 41 4D 20 42 41   RAMM3:  DB      "RAM BANK 48-62K",0
+             EF52 : 4E 4B 20 34 38 2D 
+             EF58 : 36 32 4B 00       
+     990/    EF5C :                     		
+     991/    EF5C : 88                  	        DB      BOOSUM          ;NUMBER TO MAKE CHECKSUM COME OUT TO 055H
+     992/    EF5D :                     		
+     993/    EF5D :                     	        END
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 19 - 6/17/2023 15:9:31
+MESSAGES
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+*ARCHITECTURE :                                        "i386-unknown-win32" - |
+ BIMODE :                     0EB06 C |  BOOCHK :                        55 - |
+ BOOLEN :                       800 - |  BOOORG :                     0E800 - |
+ BOOSUM :                        88 - | *CASESENSITIVE :                  0 - |
+ CHECK :                      0ED08 C |  CHECK1 :                     0ED0B C |
+ CHECK2 :                     0ED27 C |  CHECK3 :                     0ED2A C |
+ CHK1 :                       0EE21 C |  CHK2 :                       0EE29 C |
+ CHKINT :                     0EE13 C |  CHKM1 :                      0EE96 C |
+ CHKM2 :                      0EEA7 C |  CHKSUM :                     0EB67 C |
+ CO :                         0F809 - | *COMPMODE :                       0 - |
+*CONSTPI :        3.141592653589793 - |  CR :                            0D - |
+ CRLF :                       0EE49 C |  CSMEM :                          8 - |
+*DATE :                 "6/17/2023" - |  DECHO :                          7 - |
+ EOI :                           20 - |  F0 :                             4 - |
+*FALSE :                          0 - |  FFLAG :                         10 - |
+ FILL :                       0ED2D C |  FILL1 :                      0ED30 C |
+ FINA :                       0ED66 C |  FINISH :                     0ED5A C |
+*HAS64 :                          0 - |  IBF :                            2 - |
+ INIT :                       0ED71 C |  INT5 :                          20 - |
+ INT6 :                          40 - | *INT7 :                          80 - |
+ INT7V :                         38 - |  IOC1 :                       0EBB2 C |
+ IOCC :                         0C1 - |  IOCCOD :                     0EBFE C |
+ IOCDID :                     0EC07 C |  IOCDOD :                     0EC0F C |
+ IOCDRA :                     0EBE6 C |  IOCDRB :                     0EBF7 C |
+ IOCDRC :                     0EBFE - |  IOCI :                         0C0 - |
+ IOCM1 :                      0EEB5 C |  IOCM2 :                      0EED2 C |
+ IOCM3 :                      0EEDF C |  IOCM4 :                      0EEE7 C |
+ IOCO :                         0C0 - |  IOCS :                         0C1 - |
+ IOCTST :                     0EB9F C |  IOCWT :                      0EC18 C |
+ IOCWT1 :                     0EC1B C |  IPICCR :                       0FB - |
+ IPICMR :                       0FA - |  LF :                            0A - |
+*LISTON :                         1 - | *MACEXP :                         7 - |
+ MEMCHK :                     0F81B - |  MIM2 :                       0EE8A C |
+ MIM3 :                       0EE8E C |  MIM4 :                       0EE92 C |
+ MIMI :                       0EE80 C |  MIMODE :                     0EB24 C |
+*MOMCPU :                      8080 - | *MOMCPUNAME :                "8080" - |
+ MONCHK :                        2B - |  MONLEN :                       800 - |
+ MONORG :                     0F800 - | *NESTMAX :                      100 - |
+ NOTINT7 :                       7F - |  OBF :                            1 - |
+ PI01 :                       0EC40 C |  PIOC :                         0F9 - |
+ PIOCOD :                     0EC8C C |  PIODID :                     0EC95 C |
+ PIODOD :                     0EC9D C |  PIODRA :                     0EC74 C |
+ PIODRB :                     0EC85 C |  PIODRC :                     0EC8C - |
+ PIOI :                         0F8 - |  PIOM1 :                      0EEF6 C |
+ PIOM2 :                      0EF09 C |  PIOM3 :                      0EF16 C |
+ PIOM4 :                      0EF1E C |  PIOO :                         0F8 - |
+ PIOS :                         0F9 - |  PIOTST :                     0EC2D C |
+ PIOWT :                      0ECA6 C |  PIOWT1 :                     0ECA9 C |
+ POLL :                          0C - |  PRINT :                      0ED90 C |
+ PRINT1 :                     0ED91 C |  PRINTL :                     0ED9E C |
+ RAM1 :                       0ED01 C |  RAMM1 :                      0EF2D C |
+ RAMM2 :                      0EF3C C |  RAMM3 :                      0EF4C C |
+ RAMTST :                     0ECBB C | *RELAXED :                        0 - |
+ RESET :                      0EE2E C |  RESTOR :                     0EDA8 C |
+ SETA :                       0EDD0 C |  SETINT :                     0EE40 C |
+ SETLIM :                     0ED3B C |  SETLM1 :                     0ED52 C |
+ SETUP :                      0EDBF C |  SGNOFF :                     0EE71 C |
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 20 - 6/17/2023 15:9:31
+MESSAGES
+
+
+ SIGNON :                     0EE4C C |  SPICCR :                       0FD - |
+ SPICMR :                       0FC - |  SRQ :                            6 - |
+ SRQACK :                         5 - |  SUM :                        0EB8A C |
+ SUM1 :                       0EB8C C |  SUM2 :                       0EB99 C |
+ TEST :                       0EDDB C |  TEST1 :                      0EDF3 C |
+ TESTA :                      0EE03 C | *TIME :                   "15:9:31" - |
+ TOFLAG :                        11 - |  TRAM :                           9 - |
+*TRUE :                           1 - | *VERSION :                     142F - |
+*Z80SYNTAX :                      0 - |
+
+    130 symbols
+     18 unused symbols
+
+ AS V1.42 Beta [Bld 234] - Source File diagIIv13_as.asm - Page 21 - 6/17/2023 15:9:31
+MESSAGES
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+
+0.03 seconds assembly time
+
+    994 lines source file
+      2 passes
+      0 errors
+      0 warnings

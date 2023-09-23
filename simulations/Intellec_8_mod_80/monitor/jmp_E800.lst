@@ -1,0 +1,42 @@
+ AS V1.42 Beta [Bld 234] - Source File jmp_E800.asm - Page 1 - 6/17/2023 8:47:8
+
+
+       1/       0 :                             ORG       0
+       2/       0 :                     
+       3/       0 : C3 00 E8            		JMP		0E800H
+       4/       3 :                     
+ AS V1.42 Beta [Bld 234] - Source File jmp_E800.asm - Page 2 - 6/17/2023 8:47:8
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+*ARCHITECTURE :                                        "i386-unknown-win32" - |
+*CASESENSITIVE :                  0 - | *COMPMODE :                       0 - |
+*CONSTPI :        3.141592653589793 - | *DATE :                 "6/17/2023" - |
+*FALSE :                          0 - | *HAS64 :                          0 - |
+*LISTON :                         1 - | *MACEXP :                         7 - |
+*MOMCPU :                      8080 - | *MOMCPUNAME :                "8080" - |
+*NESTMAX :                      100 - | *RELAXED :                        0 - |
+*TIME :                    "8:47:8" - | *TRUE :                           1 - |
+*VERSION :                     142F - | *Z80SYNTAX :                      0 - |
+
+     17 symbols
+     17 unused symbols
+
+ AS V1.42 Beta [Bld 234] - Source File jmp_E800.asm - Page 3 - 6/17/2023 8:47:8
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+
+0.00 seconds assembly time
+
+      4 lines source file
+      1 pass
+      0 errors
+      0 warnings
