@@ -19,9 +19,17 @@ When running a simulation, multiple windows may appear, corresponding to each pe
 Some devices may allow for mouse interaction, while others will only allow keyboard interaction. 
 Each simulation typically has a README file detailing the specifics of that simulation.
 
+A guide for creating new simulations is available here: https://computingmongoose.github.io/jss/howto_simulation.html .
+
+More instructions on how to run a simulation are available here: https://computingmongoose.github.io/jss/howto_run_simulation.html .
+
 # Youtube
 
 Checkout my YouTube channel for videos about the JavaSystemSimulator project: https://www.youtube.com/@ComputingMongoose/
+
+# Website
+
+Checkout my website: https://computingmongoose.github.io/
 
 ## License
 
